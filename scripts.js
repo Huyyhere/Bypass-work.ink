@@ -1,144 +1,102 @@
 (function() {
-    "use strict";
-
-    const DEBUG = false; // debug logging
-
-    // Preserve original console methods in case the site overrides them
-    const oldLog = unsafeWindow.console.log;
-    const oldWarn = unsafeWindow.console.warn;
-    const oldError = unsafeWindow.console.error;
-
-    // Wrapper functions prepend a tag and only log when DEBUG is true
-    function log(...args) { if (DEBUG) oldLog("[UnShortener]", ...args); }
-    function warn(...args) { if (DEBUG) oldWarn("[UnShortener]", ...args); }
-    function error(...args) { if (DEBUG) oldError("[UnShortener]", ...args); }
-
-    // Override console.clear in DEBUG mode to prevent the site from erasing debug logs
+    'use strict';
+    //
+    const DEBUG = false;
+    //
+    const OldLog   = unsafeWindow.console.log;
+    const OldWarn  = unsafeWindow.console.warn;
+    const OldError = unsafeWindow.console.error;
+    //
+    function Log(...Args)   { if (DEBUG) OldLog('[Nexa]', ...Args); }
+    function Warn(...Args)  { if (DEBUG) OldWarn('[Nexa]', ...Args); }
+    function Error(...Args) { if (DEBUG) OldError('[Nexa]', ...Args); }
+    //
     if (DEBUG) unsafeWindow.console.clear = function() {};
-
-    const container = unsafeWindow.document.createElement("div");
-    container.style.position = "fixed";
-    container.style.bottom = "10px";
-    container.style.left = "10px";
-    container.style.zIndex = 999999;
-
-    // Attach closed shadow root
-    const shadow = container.attachShadow({ mode: "closed" });
-
-    // Create your hint element
-    const hint = unsafeWindow.document.createElement("div");
-    hint.textContent = "🔒 Please solve the captcha to continue";
-
-    Object.assign(hint.style, {
-        background: "rgba(0,0,0,0.8)",
-        color: "#fff",
-        padding: "8px 12px",
-        borderRadius: "6px",
-        fontSize: "14px",
-        fontFamily: "sans-serif",
-        pointerEvents: "none"
-    });
-
-    shadow.appendChild(hint);
-    unsafeWindow.document.documentElement.appendChild(container);
-
-    const NAME_MAP = {
-        sendMessage: ["sendMessage", "sendMsg", "writeMessage", "writeMsg"],
-        onLinkInfo: ["onLinkInfo"],
-        onLinkDestination: ["onLinkDestination"]
+    //
+    Log('Solve Captcha 2 Continue');
+    //
+    const Mapping = {
+        Send: ['sendMessage', 'sendMsg', 'writeMessage', 'writeMsg'],
+        Info: ['onLinkInfo'],
+        Dest: ['onLinkDestination'],
     };
-
-    function resolveName(obj, candidates) {
-        for (let i = 0; i < candidates.length; i++) {
-            const name = candidates[i];
-            if (typeof obj[name] === "function") {
-                return { fn: obj[name], index: i, name };
+    //
+    function Resolve(Obj, Candidates) {
+        for (let i = 0; i < Candidates.length; i++) {
+            const Name = Candidates[i];
+            if (typeof Obj[Name] === 'function') {
+                return { Fn: Obj[Name], Index: i, Name };
             }
         }
-        return { fn: null, index: -1, name: null };
+        return { Fn: null, Index: -1, Name: null };
     }
-
-    // Global state
-    let _sessionController = undefined;
-    let _sendMessage = undefined;
-    let _onLinkInfo = undefined;
-    let _onLinkDestination = undefined;
-
-    // Constants
-    function getClientPacketTypes() {
+    //
+	let _sessionController,
+	_sendMessage,
+	_onLinkInfo,
+	_onLinkDestination = undefined;
+    //
+    function Client() {
         return {
-            ANNOUNCE: "c_announce",
-            MONETIZATION: "c_monetization",
-            SOCIAL_STARTED: "c_social_started",
-            RECAPTCHA_RESPONSE: "c_recaptcha_response",
-            HCAPTCHA_RESPONSE: "c_hcaptcha_response",
-            TURNSTILE_RESPONSE: "c_turnstile_response",
-            ADBLOCKER_DETECTED: "c_adblocker_detected",
-            FOCUS_LOST: "c_focus_lost",
-            OFFERS_SKIPPED: "c_offers_skipped",
-            FOCUS: "c_focus",
-            WORKINK_PASS_AVAILABLE: "c_workink_pass_available",
-            WORKINK_PASS_USE: "c_workink_pass_use",
-            PING: "c_ping"
+            ANNOUNCE:               'c_announce',
+            MONETIZATION:           'c_monetization',
+            SOCIAL_STARTED:         'c_social_started',
+            RECAPTCHA_RESPONSE:     'c_recaptcha_response',
+            HCAPTCHA_RESPONSE:      'c_hcaptcha_response',
+            TURNSTILE_RESPONSE:     'c_turnstile_response',
+            ADBLOCKER_DETECTED:     'c_adblocker_detected',
+            FOCUS_LOST:             'c_focus_lost',
+            OFFERS_SKIPPED:         'c_offers_skipped',
+            FOCUS:                  'c_focus',
+            WORKINK_PASS_AVAILABLE: 'c_workink_pass_available',
+            WORKINK_PASS_USE:       'c_workink_pass_use',
+            PING:                   'c_ping',
         };
     }
-
-    const startTime = Date.now();
-
-    function createSendMessageProxy() {
-        const clientPacketTypes = getClientPacketTypes();
-
-        return function(...args) {
-            const packet_type = args[0];
-            const packet_data = args[1];
-
-            if (packet_type !== clientPacketTypes.PING) {
-                log("Sent message:", packet_type, packet_data);
-            }
-
-            if (packet_type === clientPacketTypes.ADBLOCKER_DETECTED) {
-                warn("Blocked adblocker detected message to avoid false positive.");
+    //
+    function SendProxy() {
+        const Packets = Client();
+        return function(...Args) {
+            const Type = Args[0];
+            const Data = Args[1];
+            //
+           	if (Type !== Packets.PING) {
+				Log("Sent:", Type, Data);
+			}
+            //
+            if (Type === Packets.ADBLOCKER_DETECTED) {
+                Warn('Adblocker Blocked');
                 return;
             }
-
-            if (_sessionController.linkInfo && packet_type === clientPacketTypes.TURNSTILE_RESPONSE) {
-                const ret = _sendMessage.apply(this, args);
-
-                hint.textContent = "⏳ Captcha solved, bypassing... (This can take up to a minute)";
-
-                // Send bypass messages
+            //
+            if (_sessionController && _sessionController.linkInfo && Type === Packets.TURNSTILE_RESPONSE) {
+                const Result = _sendMessage.apply(this, Args);
+                //
+                Log('Captcha Solved');
+                //
                 for (const social of _sessionController.linkInfo.socials) {
-                    _sendMessage.call(this, clientPacketTypes.SOCIAL_STARTED, {
-                        url: social.url
-                    });
+                    _sendMessage.call(this, Packets.SOCIAL_STARTED, { url: social.url });
                 }
-
+                //
                 for (const monetizationIdx in _sessionController.linkInfo.monetizations) {
                     const monetization = _sessionController.linkInfo.monetizations[monetizationIdx];
-
+                    //
                     switch (monetization) {
-                        case 22: { // readArticles2
-                            _sendMessage.call(this, clientPacketTypes.MONETIZATION, {
+                        case 22:
+                            _sendMessage.call(this, Packets.MONETIZATION, {
                                 type: "readArticles2",
-                                payload: {
-                                    event: "read"
-                                }
+                                payload: { event: "read" },
                             });
                             break;
-                        }
-
-                        case 25: { // operaGX
-                            _sendMessage.call(this, clientPacketTypes.MONETIZATION, {
+                        //
+                        case 25:
+                            _sendMessage.call(this, Packets.MONETIZATION, {
                                 type: "operaGX",
-                                payload: {
-                                    event: "start"
-                                }
+                                payload: { event: "start" },
                             });
-                            _sendMessage.call(this, clientPacketTypes.MONETIZATION, {
+                            _sendMessage.call(this, Packets.MONETIZATION, {
                                 type: "operaGX",
-                                payload: {
-                                    event: "installClicked"
-                                }
+                                payload: { event: "installClicked" },
                             });
                             fetch('https://work.ink/_api/v2/callback/operaGX', {
                                 method: 'POST',
@@ -151,312 +109,253 @@
                                 })
                             });
                             break;
-                        }
-
-                        case 34: { // norton
-                            _sendMessage.call(this, clientPacketTypes.MONETIZATION, {
+                        //
+                        case 34:
+                            _sendMessage.call(this, Packets.MONETIZATION, {
                                 type: "norton",
-                                payload: {
-                                    event: "start"
-                                }
+                                payload: { event: "start" },
                             });
-                            _sendMessage.call(this, clientPacketTypes.MONETIZATION, {
+                            _sendMessage.call(this, Packets.MONETIZATION, {
                                 type: "norton",
-                                payload: {
-                                    event: "installClicked"
-                                }
+                                payload: { event: "installClicked" },
                             });
                             break;
-                        }
-
-                        case 71: { // externalArticles
-                            _sendMessage.call(this, clientPacketTypes.MONETIZATION, {
+                        //
+                        case 71:
+                            _sendMessage.call(this, Packets.MONETIZATION, {
                                 type: "externalArticles",
-                                payload: {
-                                    event: "start"
-                                }
+                                payload: { event: "start" },
                             });
-                            _sendMessage.call(this, clientPacketTypes.MONETIZATION, {
+                            _sendMessage.call(this, Packets.MONETIZATION, {
                                 type: "externalArticles",
-                                payload: {
-                                    event: "installClicked"
-                                }
+                                payload: { event: "installClicked" },
                             });
                             break;
-                        }
-
-                        case 45: { // pdfeditor
-                            _sendMessage.call(this, clientPacketTypes.MONETIZATION, {
+                        //
+                        case 45:
+                            _sendMessage.call(this, Packets.MONETIZATION, {
                                 type: "pdfeditor",
-                                payload: {
-                                    event: "installed"
-                                }
+                                payload: { event: "installed" },
                             });
                             break;
-                        }
-
-                        case 57: { // betterdeals
-                            _sendMessage.call(this, clientPacketTypes.MONETIZATION, {
+                        //
+                        case 43:
+                            _sendMessage.call(this, Packets.MONETIZATION, {
+                                type: "temuMobile",
+                                payload: { event: "installClicked" },
+                            });
+                            break;
+                        //
+                        case 57:
+                            _sendMessage.call(this, Packets.MONETIZATION, {
                                 type: "betterdeals",
-                                payload: {
-                                    event: "installed"
-                                }
+                                payload: { event: "installed" },
                             });
                             break;
-                        }
-
-                        default: {
-                            log("Unknown monetization type:", typeof monetization, monetization);
+                        //
+                        default:
+                            Log("Unknown Monetization:", typeof monetization, monetization);
                             break;
-                        }
                     }
                 }
-
-                return ret;
+                return Result;
             }
-
-            return _sendMessage.apply(this, args);
+            //
+            return _sendMessage.apply(this, Args);
         };
     }
-
-    function createOnLinkInfoProxy() {
-        return function(...args) {
-            const linkInfo = args[0];
-
-            log("Link info received:", linkInfo);
-
-            Object.defineProperty(linkInfo, "isAdblockEnabled", {
-                get() { return false },
-                set(newValue) {
-                    log("Attempted to set isAdblockEnabled to:", newValue);
-                },
+    //
+    function InfoProxy() {
+        return function(...Args) {
+            const Link = Args[0];
+            //
+            Log('Link Info:', Link);
+            //
+            Object.defineProperty(Link, 'IsAdblockEnabled', {
+                get() { return false; },
+                set(NewValue) { Log('Attempt Set IsAdblock:', NewValue); },
                 configurable: false,
-                enumerable: true
+                enumerable: true,
             });
-
-            return _onLinkInfo.apply(this, args);
+            //
+            return _onLinkInfo.apply(this, Args);
         };
     }
-
-    function updateHint(waitLeft) {
-        hint.textContent = `⏳ Destination found, redirecting in ${waitLeft} seconds...`;
-    }
-
-    function redirect(url) {
-        hint.textContent = "🎉 Redirecting to your destination...";
-        window.location.href = url;
-    }
-
-    function startCountdown(url, waitLeft) {
-        updateHint(waitLeft);
-
-        const interval = setInterval(() => {
-            waitLeft -= 1;
-            if (waitLeft > 0) {
-                updateHint(waitLeft);
-            } else {
-                clearInterval(interval);
-                redirect(url);
-            }
-        }, 1000);
-    }
-
-    function createOnLinkDestinationProxy() {
-        return function (...args) {
-            const payload = args[0];
-            log("Link destination received:", payload);
-
-            const waitTimeSeconds = 30;
-            const secondsPassed = (Date.now() - startTime) / 1000;
-
-            if (secondsPassed >= waitTimeSeconds) {
-                redirect(payload.url);
-            } else {
-                startCountdown(payload.url, waitTimeSeconds - secondsPassed);
-            }
-
-            return _onLinkDestination.apply(this, args);
+    //
+    function DestProxy() {
+        return function(...Args) {
+            const Payload = Args[0];
+            //
+            Log('Link Dest:', Payload);
+            window.location.href = Payload.url;
+            //
+            return _onLinkDestination.apply(this, Args);
         };
     }
-
-    function setupSessionControllerProxy() {
-        const sendMessage = resolveName(_sessionController, NAME_MAP.sendMessage);
-        const onLinkInfo = resolveName(_sessionController, NAME_MAP.onLinkInfo);
-        const onLinkDestination = resolveName(_sessionController, NAME_MAP.onLinkDestination);
-
-        _sendMessage = sendMessage.fn;
-        _onLinkInfo = onLinkInfo.fn;
-        _onLinkDestination = onLinkDestination.fn;
-
-        const sendMessageProxy = createSendMessageProxy();
-        const onLinkInfoProxy = createOnLinkInfoProxy();
-        const onLinkDestinationProxy = createOnLinkDestinationProxy();
-
-        // Patch the actual property name that exists
-        Object.defineProperty(_sessionController, sendMessage.name, {
-            get() { return sendMessageProxy },
-            set(newValue) { _sendMessage = newValue },
+    //
+    function Session() {
+        const Send = Resolve(_sessionController, Mapping.Send);
+        const Info = Resolve(_sessionController, Mapping.Info);
+        const Dest = Resolve(_sessionController, Mapping.Dest);
+        //
+        _sendMessage       = Send.Fn;
+        _onLinkInfo        = Info.Fn;
+        _onLinkDestination = Dest.Fn;
+        //
+        const SendProxyObj = SendProxy();
+        const InfoProxyObj = InfoProxy();
+        const DestProxyObj = DestProxy();
+        //
+        Object.defineProperty(_sessionController, Send.Name, {
+            get() { return SendProxyObj; },
+            set(NewValue) { _sendMessage = NewValue; },
             configurable: false,
-            enumerable: true
+            enumerable: true,
         });
-
-        Object.defineProperty(_sessionController, onLinkInfo.name, {
-            get() { return onLinkInfoProxy },
-            set(newValue) { _onLinkInfo = newValue },
+        //
+        Object.defineProperty(_sessionController, Info.Name, {
+            get() { return InfoProxyObj; },
+            set(NewValue) { _onLinkInfo = NewValue; },
             configurable: false,
-            enumerable: true
+            enumerable: true,
         });
-
-        Object.defineProperty(_sessionController, onLinkDestination.name, {
-            get() { return onLinkDestinationProxy },
-            set(newValue) { _onLinkDestination = newValue },
+        //
+        Object.defineProperty(_sessionController, Dest.Name, {
+            get() { return DestProxyObj; },
+            set(NewValue) { _onLinkDestination = NewValue; },
             configurable: false,
-            enumerable: true
+            enumerable: true,
         });
-
-        log(`SessionController proxies installed: ${sendMessage.name}, ${onLinkInfo.name}, ${onLinkDestination.name}`);
+        //
+        Log(`Session Proxies: ${Send.Name}, ${Info.Name}, ${Dest.Name}`);
     }
-
-    function checkForSessionController(target, prop, value, receiver) {
-        log("Checking property set:", prop, value);
-
+    //
+    function Check(Object, Property, Value, Receiver) {
+        Log('Check:', Property, Value);
+        //
         if (
-            value &&
-            typeof value === "object" &&
-            resolveName(value, NAME_MAP.sendMessage).fn &&
-            resolveName(value, NAME_MAP.onLinkInfo).fn &&
-            resolveName(value, NAME_MAP.onLinkDestination).fn &&
+            Value &&
+            typeof Value === 'object' &&
+            Resolve(Value, Mapping.Send).Fn &&
+            Resolve(Value, Mapping.Info).Fn &&
+            Resolve(Value, Mapping.Dest).Fn &&
             !_sessionController
         ) {
-            _sessionController = value;
-            log("Intercepted session controller:", _sessionController);
-            setupSessionControllerProxy();
+            _sessionController = Value;
+            Log('Intercepted Session:', _sessionController);
+            Session();
         }
-
-        return Reflect.set(target, prop, value, receiver);
+        //
+        return Reflect.set(Object, Property, Value, Receiver);
     }
-
-    function createComponentProxy(component) {
-        return new Proxy(component, {
-            construct(target, args) {
-                const result = Reflect.construct(target, args);
-                log("Intercepted SvelteKit component construction:", target, args, result);
-
-                result.$$.ctx = new Proxy(result.$$.ctx, {
-                    set: checkForSessionController
-                });
-
-                return result;
-            }
+    //
+    function CompProxy(Component) {
+        return new Proxy(Component, {
+            construct(Target, Args) {
+                const Result = Reflect.construct(Target, Args);
+                Log('Component:', Target, Args, Result);
+                Result.$$.ctx = new Proxy(Result.$$.ctx, { set: Check });
+                return Result;
+            },
         });
     }
-
-    function createNodeResultProxy(result) {
-        return new Proxy(result, {
-            get(target, prop, receiver) {
-                if (prop === "component") {
-                    return createComponentProxy(target.component);
-                }
-                return Reflect.get(target, prop, receiver);
-            }
+    //
+    function NodeProxy(Result) {
+        return new Proxy(Result, {
+            get(Target, Property, Receiver) {
+                if (Property === 'component') return CompProxy(Target.component);
+                return Reflect.get(Target, Property, Receiver);
+            },
         });
     }
-
-    function createNodeProxy(oldNode) {
-        return async (...args) => {
-            const result = await oldNode(...args);
-            log("Intercepted SvelteKit node result:", result);
-            return createNodeResultProxy(result);
+    //
+    function AsyncNode(Node) {
+        return async(...Args) => {
+            const Result = await Node(...Args);
+            Log('Node:', Result);
+            return NodeProxy(Result);
         };
     }
-
-    function createKitProxy(kit) {
-      	if (typeof kit !== "object" || !kit) return [false, kit];
-
-        const originalStart = "start" in kit && kit.start;
-        if (!originalStart) return [false, kit];
-
-        const kitProxy = new Proxy(kit, {
-            get(target, prop, receiver) {
-                if (prop === "start") {
-                    return function(...args) {
-                        const appModule = args[0];
-                        const options = args[2];
-
-                        if (typeof appModule === "object" &&
-                            typeof appModule.nodes === "object" &&
-                            typeof options === "object" &&
-                            typeof options.node_ids === "object") {
-
-                            const oldNode = appModule.nodes[options.node_ids[1]];
-                            appModule.nodes[options.node_ids[1]] = createNodeProxy(oldNode);
+    //
+    function KitProxy(Kit) {
+        if (typeof Kit !== 'object' || !Kit) return [false, Kit];
+        //
+        const Start = 'start' in Kit && Kit.start;
+        if (!Start) return [false, Kit];
+        //
+        const ProxyKit = new Proxy(Kit, {
+            get(Target, Property, Receiver) {
+                if (Property === 'start') {
+                    return function(...Args) {
+                        const Module  = Args[0];
+                        const Options = Args[2];
+                        //
+                        if (
+                            typeof Module === 'object' &&
+                            typeof Module.nodes === 'object' &&
+                            typeof Options === 'object' &&
+                            typeof Options.node_ids === 'object'
+                        ) {
+                            const Node = Module.nodes[Options.node_ids[1]];
+                            Module.nodes[Options.node_ids[1]] = AsyncNode(Node);
                         }
-
-                        log("kit.start intercepted!", options);
-                        return originalStart.apply(this, args);
+                        //
+                        Log('Kit.Start Hooked', Options);
+                        return Start.apply(this, Args);
                     };
                 }
-                return Reflect.get(target, prop, receiver);
-            }
+                return Reflect.get(Target, Property, Receiver);
+            },
         });
-
-        return [true, kitProxy];
+        return [true, ProxyKit];
     }
-
-    function setupSvelteKitInterception() {
-        const originalPromiseAll = unsafeWindow.Promise.all;
-        let intercepted = false;
-
-        unsafeWindow.Promise.all = async function(promises) {
-            const result = originalPromiseAll.call(this, promises);
-
-            if (!intercepted) {
-                intercepted = true;
-
-                return await new Promise((resolve) => {
-                    result.then(([kit, app, ...args]) => {
-                        log("SvelteKit modules loaded");
-
-                        const [success, wrappedKit] = createKitProxy(kit);
-                        if (success) {
-                            // Restore original Promise.all
-                            unsafeWindow.Promise.all = originalPromiseAll;
-
-                            log("Wrapped kit ready:", wrappedKit, app);
+    //
+    function KitSetup() {
+        const OriginalPromiseAll = unsafeWindow.Promise.all;
+        let Intercepted = false;
+        //
+        unsafeWindow.Promise.all = async function(Promises) {
+            const Result = OriginalPromiseAll.call(this, Promises);
+            //
+            if (!Intercepted) {
+                Intercepted = true;
+                return await new Promise((Resolve) => {
+                    Result.then(([Kit, App, ...Args]) => {
+                        Log('Modules Loaded');
+                        const [Success, WrappedKit] = KitProxy(Kit);
+                        if (Success) {
+                            unsafeWindow.Promise.all = OriginalPromiseAll;
+                            Log('Wrapped Kit:', WrappedKit, App);
                         }
-
-                        resolve([wrappedKit, app, ...args]);
+                        Resolve([WrappedKit, App, ...Args]);
                     });
                 });
             }
-
-            return await result;
+            return await Result;
         };
     }
-
-    // Initialize the bypass
-    setupSvelteKitInterception();
-
-    // Remove injected ads
-    const observer = new MutationObserver((mutations) => {
-        for (const m of mutations) {
-            for (const node of m.addedNodes) {
-                if (node.nodeType === 1) {
-                    // Direct match
-                    if (node.classList?.contains("adsbygoogle")) {
-                        node.remove();
-                        log("Removed injected ad:", node);
+    //
+    KitSetup();
+    //
+    const Observer = new MutationObserver((Mutations) => {
+        for (const Mutation of Mutations) {
+            for (const Node of Mutation.addedNodes) {
+                if (Node.nodeType === 1) {
+                    if (Node.classList?.contains('adsbygoogle')) {
+                        Node.remove();
+                        Log('Removed Ad:', Node);
                     }
-                    // Or children inside the node
-                    node.querySelectorAll?.(".adsbygoogle").forEach((el) => {
-                        el.remove();
-                        log("Removed nested ad:", el);
+                    Node.querySelectorAll?.('.adsbygoogle').forEach((Element) => {
+                        Element.remove();
+                        Log('Removed Nested Ad:', Element);
                     });
                 }
             }
         }
     });
-
-    // Start observing the document for changes
-    observer.observe(unsafeWindow.document.documentElement, { childList: true, subtree: true });
+    //
+    Observer.observe(unsafeWindow.document.documentElement, {
+        childList: true,
+        subtree: true,
+    });
 })();
