@@ -2,319 +2,234 @@
     "use strict";
 
     const DEBUG = false;
-
     const oldLog = unsafeWindow.console.log;
     const oldWarn = unsafeWindow.console.warn;
     const oldError = unsafeWindow.console.error;
 
-    function log(...args) { if (DEBUG) oldLog("[UnShortener Pro]", ...args); }
-    function warn(...args) { if (DEBUG) oldWarn("[UnShortener Pro]", ...args); }
-    function error(...args) { if (DEBUG) oldError("[UnShortener Pro]", ...args); }
+    function log(...args) { if (DEBUG) oldLog("[UnShortener]", ...args); }
+    function warn(...args) { if (DEBUG) oldWarn("[UnShortener]", ...args); }
+    function error(...args) { if (DEBUG) oldError("[UnShortener]", ...args); }
 
     if (DEBUG) unsafeWindow.console.clear = function() {};
 
-    // ===== ENHANCED GUI SYSTEM =====
-    const container = unsafeWindow.document.createElement("div");
-    container.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 999999;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    `;
+    // Simple GUI
+    const box = unsafeWindow.document.createElement("div");
+    box.style.cssText = "position:fixed;top:15px;right:15px;z-index:999999";
+    const shadow = box.attachShadow({ mode: "closed" });
 
-    const shadow = container.attachShadow({ mode: "closed" });
-
-    // Add styles
-    const style = unsafeWindow.document.createElement("style");
-    style.textContent = `
-        @keyframes slideIn {
-            from {
-                transform: translateX(400px);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        @keyframes progressBar {
-            from { width: 0%; }
-            to { width: 100%; }
-        }
-
-        .gui-container {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 16px;
-            padding: 20px;
-            min-width: 320px;
-            max-width: 380px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            animation: slideIn 0.5s ease-out;
-            color: white;
-        }
-
-        .gui-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 16px;
-            padding-bottom: 12px;
-            border-bottom: 2px solid rgba(255,255,255,0.2);
-        }
-
-        .gui-title {
-            font-size: 20px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .gui-logo {
-            font-size: 24px;
-            animation: pulse 2s ease-in-out infinite;
-        }
-
-        .gui-status {
-            background: rgba(255,255,255,0.15);
-            backdrop-filter: blur(10px);
-            padding: 16px;
+    const css = unsafeWindow.document.createElement("style");
+    css.textContent = `
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        .wrap {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
             border-radius: 12px;
-            margin-bottom: 16px;
+            padding: 18px;
+            width: 300px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 14px;
         }
-
-        .status-text {
-            font-size: 15px;
-            margin-bottom: 8px;
+        
+        .hd {
             display: flex;
             align-items: center;
             gap: 8px;
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
         }
-
-        .status-icon {
-            font-size: 20px;
-        }
-
-        .spinner {
-            display: inline-block;
-            animation: spin 1s linear infinite;
-        }
-
-        .progress-container {
-            background: rgba(0,0,0,0.2);
-            border-radius: 10px;
-            height: 8px;
-            overflow: hidden;
-            margin-top: 12px;
-        }
-
-        .progress-bar {
-            background: linear-gradient(90deg, #00f260, #0575e6);
-            height: 100%;
-            border-radius: 10px;
-            transition: width 0.3s ease;
-        }
-
-        .progress-bar.animated {
-            animation: progressBar 30s linear;
-        }
-
-        .gui-info {
-            background: rgba(255,255,255,0.1);
+        
+        .logo { font-size: 18px; }
+        .title { font-size: 16px; font-weight: 600; flex: 1; }
+        .ver { font-size: 11px; opacity: 0.7; }
+        
+        .status {
+            background: rgba(255,255,255,0.12);
             padding: 12px;
-            border-radius: 10px;
-            font-size: 13px;
+            border-radius: 8px;
             margin-bottom: 12px;
         }
-
-        .info-row {
+        
+        .msg {
             display: flex;
-            justify-content: space-between;
-            margin: 6px 0;
-        }
-
-        .info-label {
-            opacity: 0.8;
-        }
-
-        .info-value {
-            font-weight: bold;
-        }
-
-        .gui-footer {
-            text-align: center;
-            padding-top: 12px;
-            border-top: 2px solid rgba(255,255,255,0.2);
-            font-size: 12px;
-        }
-
-        .credit-text {
-            margin: 4px 0;
-            opacity: 0.9;
-        }
-
-        .discord-link {
-            display: inline-flex;
             align-items: center;
             gap: 6px;
-            background: #5865F2;
-            color: white;
-            padding: 8px 16px;
+            font-size: 13px;
+        }
+        
+        .bar-wrap {
+            background: rgba(0,0,0,0.15);
+            height: 4px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+            display: none;
+        }
+        
+        .bar {
+            background: linear-gradient(90deg, #10b981, #06b6d4);
+            height: 100%;
+            width: 0;
+            transition: width 0.3s;
+        }
+        
+        .info {
+            background: rgba(255,255,255,0.08);
+            padding: 10px;
             border-radius: 8px;
+            margin-bottom: 10px;
+            display: none;
+        }
+        
+        .row {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            font-size: 12px;
+        }
+        
+        .lbl { opacity: 0.8; }
+        .val { font-weight: 600; }
+        
+        .ft {
+            text-align: center;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+            font-size: 11px;
+        }
+        
+        .ft a {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: #5865f2;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 6px;
             text-decoration: none;
-            font-weight: bold;
-            margin-top: 8px;
-            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 6px;
+            font-weight: 600;
+            transition: all 0.2s;
         }
-
-        .discord-link:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(88,101,242,0.4);
+        
+        .ft a:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(88,101,242,0.4);
         }
-
-        .success-checkmark {
-            font-size: 48px;
+        
+        .big {
+            font-size: 28px;
             text-align: center;
-            margin: 12px 0;
-            animation: pulse 1s ease-in-out;
+            margin: 8px 0;
         }
-
-        .countdown-number {
-            font-size: 32px;
-            font-weight: bold;
-            text-align: center;
-            margin: 12px 0;
-        }
+        
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spin { display: inline-block; animation: spin 1s linear infinite; }
     `;
-    shadow.appendChild(style);
+    shadow.appendChild(css);
 
-    // Create GUI
-    const gui = unsafeWindow.document.createElement("div");
-    gui.className = "gui-container";
-    gui.innerHTML = `
-        <div class="gui-header">
-            <div class="gui-title">
-                <span class="gui-logo">🚀</span>
-                <span>UnShortener Pro</span>
-            </div>
-            <div style="font-size: 12px; opacity: 0.8;">v2.0</div>
+    const ui = unsafeWindow.document.createElement("div");
+    ui.className = "wrap";
+    ui.innerHTML = `
+        <div class="hd">
+            <span class="logo">⚡</span>
+            <span class="title">Work.ink Bypass</span>
+            <span class="ver">v1.0.0</span>
         </div>
-        <div class="gui-status">
-            <div class="status-text">
-                <span class="status-icon">🔒</span>
-                <span id="status-message">Please solve the captcha</span>
-            </div>
-            <div class="progress-container" id="progress-container" style="display: none;">
-                <div class="progress-bar" id="progress-bar"></div>
+        <div class="status">
+            <div class="msg" id="msg">🔒 Solve captcha first</div>
+            <div class="bar-wrap" id="barwrap">
+                <div class="bar" id="bar"></div>
             </div>
         </div>
-        <div class="gui-info" id="info-panel" style="display: none;">
-            <div class="info-row">
-                <span class="info-label">Status:</span>
-                <span class="info-value" id="info-status">Waiting</span>
+        <div class="info" id="info">
+            <div class="row">
+                <span class="lbl">Status:</span>
+                <span class="val" id="st">Waiting</span>
             </div>
-            <div class="info-row">
-                <span class="info-label">Socials bypassed:</span>
-                <span class="info-value" id="info-socials">0</span>
+            <div class="row">
+                <span class="lbl">Socials:</span>
+                <span class="val" id="soc">0</span>
             </div>
-            <div class="info-row">
-                <span class="info-label">Monetizations:</span>
-                <span class="info-value" id="info-monetizations">0</span>
+            <div class="row">
+                <span class="lbl">Offers:</span>
+                <span class="val" id="mon">0</span>
             </div>
         </div>
-        <div class="gui-footer">
-            <div class="credit-text">✨ Made by <strong>Huyyhere</strong></div>
-            <a href="https://discord.gg/WxFMRXNUuC" target="_blank" class="discord-link">
-                <svg width="20" height="20" viewBox="0 0 71 55" fill="none">
-                    <path d="M60.1045 4.8978C55.5792 2.8214 50.7265 1.2916 45.6527 0.41542C45.5603 0.39851 45.468 0.440769 45.4204 0.525289C44.7963 1.6353 44.105 3.0834 43.6209 4.2216C38.1637 3.4046 32.7345 3.4046 27.3892 4.2216C26.905 3.0581 26.1886 1.6353 25.5617 0.525289C25.5141 0.443589 25.4218 0.40133 25.3294 0.41542C20.2584 1.2888 15.4057 2.8186 10.8776 4.8978C10.8384 4.9147 10.8048 4.9429 10.7825 4.9795C1.57795 18.7309 -0.943561 32.1443 0.293408 45.3914C0.299005 45.4562 0.335386 45.5182 0.385761 45.5576C6.45866 50.0174 12.3413 52.7249 18.1147 54.5195C18.2071 54.5477 18.305 54.5139 18.3638 54.4378C19.7295 52.5728 20.9469 50.6063 21.9907 48.5383C22.0523 48.4172 21.9935 48.2735 21.8676 48.2256C19.9366 47.4931 18.0979 46.6 16.3292 45.5858C16.1893 45.5041 16.1781 45.304 16.3068 45.2082C16.679 44.9293 17.0513 44.6391 17.4067 44.3461C17.471 44.2926 17.5606 44.2813 17.6362 44.3151C29.2558 49.6202 41.8354 49.6202 53.3179 44.3151C53.3935 44.2785 53.4831 44.2898 53.5502 44.3433C53.9057 44.6363 54.2779 44.9293 54.6529 45.2082C54.7816 45.304 54.7732 45.5041 54.6333 45.5858C52.8646 46.6197 51.0259 47.4931 49.0921 48.2228C48.9662 48.2707 48.9102 48.4172 48.9718 48.5383C50.038 50.6034 51.2554 52.5699 52.5959 54.435C52.6519 54.5139 52.7526 54.5477 52.845 54.5195C58.6464 52.7249 64.529 50.0174 70.6019 45.5576C70.6551 45.5182 70.6887 45.459 70.6943 45.3942C72.1747 30.0791 68.2147 16.7757 60.1968 4.9823C60.1772 4.9429 60.1437 4.9147 60.1045 4.8978ZM23.7259 37.3253C20.2276 37.3253 17.3451 34.1136 17.3451 30.1693C17.3451 26.225 20.1717 23.0133 23.7259 23.0133C27.308 23.0133 30.1626 26.2532 30.1066 30.1693C30.1066 34.1136 27.28 37.3253 23.7259 37.3253ZM47.3178 37.3253C43.8196 37.3253 40.9371 34.1136 40.9371 30.1693C40.9371 26.225 43.7636 23.0133 47.3178 23.0133C50.9 23.0133 53.7545 26.2532 53.6986 30.1693C53.6986 34.1136 50.9 37.3253 47.3178 37.3253Z" fill="currentColor"/>
+        <div class="ft">
+            <div>by Huyyhere</div>
+            <a href="https://discord.gg/WxFMRXNUuC" target="_blank">
+                <svg width="16" height="16" viewBox="0 0 71 55" fill="currentColor">
+                    <path d="M60.1 4.9C55.6 2.8 50.7 1.3 45.7 0.4c-0.1 0-0.2 0-0.2 0.1c-0.6 1.1-1.3 2.6-1.8 3.8c-5.5-0.8-10.9-0.8-16.2 0c-0.5-1.2-1.2-2.6-1.8-3.8c0-0.1-0.1-0.1-0.2-0.1c-5.1 0.9-9.9 2.4-14.5 4.5c0 0-0.1 0-0.1 0.1C1.6 18.7-0.9 32.1 0.3 45.4c0 0 0 0.1 0.1 0.2c6.1 4.5 12 7.2 17.7 9c0.1 0 0.2 0 0.2-0.1c1.4-1.9 2.6-3.9 3.7-6c0.1-0.1 0-0.2-0.1-0.3c-1.9-0.7-3.8-1.6-5.5-2.6c-0.1-0.1-0.2-0.3 0-0.4c0.4-0.3 0.7-0.6 1.1-0.9c0.1-0.1 0.2-0.1 0.2 0c11.6 5.3 24.2 5.3 35.7 0c0.1 0 0.2 0 0.2 0c0.4 0.3 0.7 0.6 1.1 0.9c0.1 0.1 0.1 0.3 0 0.4c-1.8 1-3.6 1.9-5.5 2.6c-0.1 0-0.2 0.2-0.1 0.3c1.1 2.1 2.3 4.1 3.6 6c0.1 0.1 0.2 0.1 0.2 0.1c5.8-1.8 11.7-4.5 17.8-9c0.1 0 0.1-0.1 0.1-0.2c1.5-15.3-2.5-28.6-10.5-40.4C60.1 4.9 60.1 4.9 60.1 4.9z M23.7 37.3c-3.5 0-6.4-3.2-6.4-7.2s2.8-7.2 6.4-7.2c3.6 0 6.4 3.2 6.4 7.2C30.1 34.1 27.3 37.3 23.7 37.3z M47.3 37.3c-3.5 0-6.4-3.2-6.4-7.2s2.8-7.2 6.4-7.2c3.6 0 6.4 3.2 6.4 7.2C53.7 34.1 50.9 37.3 47.3 37.3z"/>
                 </svg>
-                Join Discord Server
+                Discord
             </a>
         </div>
     `;
 
-    shadow.appendChild(gui);
-    unsafeWindow.document.documentElement.appendChild(container);
+    shadow.appendChild(ui);
+    unsafeWindow.document.documentElement.appendChild(box);
 
-    // GUI Helper functions
-    const statusMessage = shadow.getElementById("status-message");
-    const progressContainer = shadow.getElementById("progress-container");
-    const progressBar = shadow.getElementById("progress-bar");
-    const infoPanel = shadow.getElementById("info-panel");
-    const infoStatus = shadow.getElementById("info-status");
-    const infoSocials = shadow.getElementById("info-socials");
-    const infoMonetizations = shadow.getElementById("info-monetizations");
+    const msg = shadow.getElementById("msg");
+    const barwrap = shadow.getElementById("barwrap");
+    const bar = shadow.getElementById("bar");
+    const info = shadow.getElementById("info");
+    const st = shadow.getElementById("st");
+    const soc = shadow.getElementById("soc");
+    const mon = shadow.getElementById("mon");
 
-    function updateStatus(icon, message, showProgress = false) {
-        statusMessage.innerHTML = `<span class="status-icon">${icon}</span><span>${message}</span>`;
-        progressContainer.style.display = showProgress ? "block" : "none";
+    function upd(ico, txt, prog = false) {
+        msg.innerHTML = `${ico} ${txt}`;
+        barwrap.style.display = prog ? "block" : "none";
     }
 
-    function showBypassInfo(socials, monetizations) {
-        infoPanel.style.display = "block";
-        infoStatus.textContent = "Bypassing...";
-        infoSocials.textContent = socials;
-        infoMonetizations.textContent = monetizations;
+    function show(s, m) {
+        info.style.display = "block";
+        st.textContent = "Bypassing";
+        soc.textContent = s;
+        mon.textContent = m;
     }
 
-    function updateBypassProgress() {
-        progressBar.style.width = "100%";
-        infoStatus.textContent = "Complete ✓";
+    function done() {
+        bar.style.width = "100%";
+        st.textContent = "Done ✓";
     }
 
-    function showCountdown(seconds) {
-        const statusDiv = shadow.querySelector(".gui-status");
+    function countdown(sec) {
+        const statusDiv = shadow.querySelector(".status");
         statusDiv.innerHTML = `
-            <div class="success-checkmark">✅</div>
-            <div class="status-text" style="justify-content: center;">
-                <span>Redirecting in</span>
-            </div>
-            <div class="countdown-number" id="countdown">${Math.ceil(seconds)}</div>
+            <div class="big">✅</div>
+            <div class="msg" style="justify-content:center">Redirect in</div>
+            <div class="big" id="cd">${Math.ceil(sec)}</div>
         `;
     }
 
-    function updateCountdown(seconds) {
-        const countdown = shadow.getElementById("countdown");
-        if (countdown) {
-            countdown.textContent = Math.ceil(seconds);
-        }
+    function tick(sec) {
+        const cd = shadow.getElementById("cd");
+        if (cd) cd.textContent = Math.ceil(sec);
     }
 
-    // ===== ORIGINAL BYPASS LOGIC =====
     const NAME_MAP = {
         sendMessage: ["sendMessage", "sendMsg", "writeMessage", "writeMsg"],
         onLinkInfo: ["onLinkInfo"],
         onLinkDestination: ["onLinkDestination"]
     };
 
-    function resolveName(obj, candidates) {
-        for (let i = 0; i < candidates.length; i++) {
-            const name = candidates[i];
-            if (typeof obj[name] === "function") {
-                return { fn: obj[name], index: i, name };
+    function find(obj, names) {
+        for (let i = 0; i < names.length; i++) {
+            const n = names[i];
+            if (typeof obj[n] === "function") {
+                return { fn: obj[n], idx: i, name: n };
             }
         }
-        return { fn: null, index: -1, name: null };
+        return { fn: null, idx: -1, name: null };
     }
 
-    let _sessionController = undefined;
-    let _sendMessage = undefined;
-    let _onLinkInfo = undefined;
-    let _onLinkDestination = undefined;
+    let ctrl, send, info1, dest;
 
-    function getClientPacketTypes() {
+    function pkts() {
         return {
             ANNOUNCE: "c_announce",
             MONETIZATION: "c_monetization",
@@ -332,61 +247,50 @@
         };
     }
 
-    const startTime = Date.now();
+    const t0 = Date.now();
 
-    function createSendMessageProxy() {
-        const clientPacketTypes = getClientPacketTypes();
-
+    function sendProxy() {
+        const p = pkts();
         return function(...args) {
-            const packet_type = args[0];
-            const packet_data = args[1];
+            const typ = args[0];
+            const dat = args[1];
 
-            if (packet_type !== clientPacketTypes.PING) {
-                log("Sent message:", packet_type, packet_data);
-            }
-
-            if (packet_type === clientPacketTypes.ADBLOCKER_DETECTED) {
-                warn("Blocked adblocker detected message");
+            if (typ !== p.PING) log("Send:", typ, dat);
+            if (typ === p.ADBLOCKER_DETECTED) {
+                warn("Block adblock msg");
                 return;
             }
 
-            if (_sessionController.linkInfo && packet_type === clientPacketTypes.TURNSTILE_RESPONSE) {
-                const ret = _sendMessage.apply(this, args);
+            if (ctrl.linkInfo && typ === p.TURNSTILE_RESPONSE) {
+                const ret = send.apply(this, args);
+                upd("⚡", "Captcha solved! Bypassing...", true);
 
-                updateStatus("⚡", "Captcha solved! Bypassing...", true);
-                progressBar.classList.add("animated");
+                const sc = ctrl.linkInfo.socials.length;
+                const mc = ctrl.linkInfo.monetizations.length;
+                show(sc, mc);
 
-                const socialsCount = _sessionController.linkInfo.socials.length;
-                const monetizationsCount = _sessionController.linkInfo.monetizations.length;
-                
-                showBypassInfo(socialsCount, monetizationsCount);
-
-                for (const social of _sessionController.linkInfo.socials) {
-                    _sendMessage.call(this, clientPacketTypes.SOCIAL_STARTED, {
-                        url: social.url
-                    });
+                for (const s of ctrl.linkInfo.socials) {
+                    send.call(this, p.SOCIAL_STARTED, { url: s.url });
                 }
 
-                for (const monetizationIdx in _sessionController.linkInfo.monetizations) {
-                    const monetization = _sessionController.linkInfo.monetizations[monetizationIdx];
-
-                    switch (monetization) {
+                for (const m of ctrl.linkInfo.monetizations) {
+                    switch (m) {
                         case 22:
-                            _sendMessage.call(this, clientPacketTypes.MONETIZATION, {
+                            send.call(this, p.MONETIZATION, {
                                 type: "readArticles2",
                                 payload: { event: "read" }
                             });
                             break;
                         case 25:
-                            _sendMessage.call(this, clientPacketTypes.MONETIZATION, {
+                            send.call(this, p.MONETIZATION, {
                                 type: "operaGX",
                                 payload: { event: "start" }
                             });
-                            _sendMessage.call(this, clientPacketTypes.MONETIZATION, {
+                            send.call(this, p.MONETIZATION, {
                                 type: "operaGX",
                                 payload: { event: "installClicked" }
                             });
-                            fetch('https://work.ink/_api/v2/callback/operaGX', {
+                            fetch('https://work.ink/_api/v1/callback/operaGX', {
                                 method: 'POST',
                                 mode: 'no-cors',
                                 headers: { 'Content-Type': 'application/json' },
@@ -394,280 +298,257 @@
                             });
                             break;
                         case 34:
-                            _sendMessage.call(this, clientPacketTypes.MONETIZATION, {
+                            send.call(this, p.MONETIZATION, {
                                 type: "norton",
                                 payload: { event: "start" }
                             });
-                            _sendMessage.call(this, clientPacketTypes.MONETIZATION, {
+                            send.call(this, p.MONETIZATION, {
                                 type: "norton",
                                 payload: { event: "installClicked" }
                             });
                             break;
                         case 71:
-                            _sendMessage.call(this, clientPacketTypes.MONETIZATION, {
+                            send.call(this, p.MONETIZATION, {
                                 type: "externalArticles",
                                 payload: { event: "start" }
                             });
-                            _sendMessage.call(this, clientPacketTypes.MONETIZATION, {
+                            send.call(this, p.MONETIZATION, {
                                 type: "externalArticles",
                                 payload: { event: "installClicked" }
                             });
                             break;
                         case 45:
-                            _sendMessage.call(this, clientPacketTypes.MONETIZATION, {
+                            send.call(this, p.MONETIZATION, {
                                 type: "pdfeditor",
                                 payload: { event: "installed" }
                             });
                             break;
                         case 57:
-                            _sendMessage.call(this, clientPacketTypes.MONETIZATION, {
+                            send.call(this, p.MONETIZATION, {
                                 type: "betterdeals",
                                 payload: { event: "installed" }
                             });
                             break;
                         default:
-                            log("Unknown monetization:", monetization);
+                            log("Unknown monetization:", m);
                             break;
                     }
                 }
 
-                setTimeout(() => {
-                    updateBypassProgress();
-                }, 1000);
-
+                setTimeout(() => done(), 1000);
                 return ret;
             }
 
-            return _sendMessage.apply(this, args);
+            return send.apply(this, args);
         };
     }
 
-    function createOnLinkInfoProxy() {
+    function infoProxy() {
         return function(...args) {
-            const linkInfo = args[0];
-            log("Link info received:", linkInfo);
+            const li = args[0];
+            log("Link info:", li);
 
-            Object.defineProperty(linkInfo, "isAdblockEnabled", {
+            Object.defineProperty(li, "isAdblockEnabled", {
                 get() { return false },
-                set(newValue) { log("Blocked isAdblockEnabled set:", newValue); },
+                set(v) { log("Block adblock set:", v); },
                 configurable: false,
                 enumerable: true
             });
 
-            return _onLinkInfo.apply(this, args);
+            return info1.apply(this, args);
         };
     }
 
-    function redirect(url) {
-        updateStatus("🎉", "Redirecting now!");
-        setTimeout(() => {
-            window.location.href = url;
-        }, 500);
+    function redir(url) {
+        upd("🎉", "Redirecting...");
+        setTimeout(() => { window.location.href = url; }, 500);
     }
 
-    function startCountdown(url, waitLeft) {
-        showCountdown(waitLeft);
-
-        const interval = setInterval(() => {
-            waitLeft -= 1;
-            if (waitLeft > 0) {
-                updateCountdown(waitLeft);
+    function startcd(url, wait) {
+        countdown(wait);
+        const iv = setInterval(() => {
+            wait -= 1;
+            if (wait > 0) {
+                tick(wait);
             } else {
-                clearInterval(interval);
-                redirect(url);
+                clearInterval(iv);
+                redir(url);
             }
         }, 1000);
     }
 
-    function createOnLinkDestinationProxy() {
-        return function (...args) {
-            const payload = args[0];
-            log("Link destination received:", payload);
+    function destProxy() {
+        return function(...args) {
+            const pl = args[0];
+            log("Destination:", pl);
 
-            const waitTimeSeconds = 30;
-            const secondsPassed = (Date.now() - startTime) / 1000;
+            const wait = 30;
+            const passed = (Date.now() - t0) / 1000;
 
-            if (secondsPassed >= waitTimeSeconds) {
-                redirect(payload.url);
+            if (passed >= wait) {
+                redir(pl.url);
             } else {
-                startCountdown(payload.url, waitTimeSeconds - secondsPassed);
+                startcd(pl.url, wait - passed);
             }
 
-            return _onLinkDestination.apply(this, args);
+            return dest.apply(this, args);
         };
     }
 
-    function setupSessionControllerProxy() {
-        const sendMessage = resolveName(_sessionController, NAME_MAP.sendMessage);
-        const onLinkInfo = resolveName(_sessionController, NAME_MAP.onLinkInfo);
-        const onLinkDestination = resolveName(_sessionController, NAME_MAP.onLinkDestination);
+    function setup() {
+        const s = find(ctrl, NAME_MAP.sendMessage);
+        const i = find(ctrl, NAME_MAP.onLinkInfo);
+        const d = find(ctrl, NAME_MAP.onLinkDestination);
 
-        _sendMessage = sendMessage.fn;
-        _onLinkInfo = onLinkInfo.fn;
-        _onLinkDestination = onLinkDestination.fn;
+        send = s.fn;
+        info1 = i.fn;
+        dest = d.fn;
 
-        const sendMessageProxy = createSendMessageProxy();
-        const onLinkInfoProxy = createOnLinkInfoProxy();
-        const onLinkDestinationProxy = createOnLinkDestinationProxy();
+        const sp = sendProxy();
+        const ip = infoProxy();
+        const dp = destProxy();
 
-        Object.defineProperty(_sessionController, sendMessage.name, {
-            get() { return sendMessageProxy },
-            set(newValue) { _sendMessage = newValue },
+        Object.defineProperty(ctrl, s.name, {
+            get() { return sp },
+            set(v) { send = v },
             configurable: false,
             enumerable: true
         });
 
-        Object.defineProperty(_sessionController, onLinkInfo.name, {
-            get() { return onLinkInfoProxy },
-            set(newValue) { _onLinkInfo = newValue },
+        Object.defineProperty(ctrl, i.name, {
+            get() { return ip },
+            set(v) { info1 = v },
             configurable: false,
             enumerable: true
         });
 
-        Object.defineProperty(_sessionController, onLinkDestination.name, {
-            get() { return onLinkDestinationProxy },
-            set(newValue) { _onLinkDestination = newValue },
+        Object.defineProperty(ctrl, d.name, {
+            get() { return dp },
+            set(v) { dest = v },
             configurable: false,
             enumerable: true
         });
 
-        log(`Proxies installed: ${sendMessage.name}, ${onLinkInfo.name}, ${onLinkDestination.name}`);
+        log(`Hooks: ${s.name}, ${i.name}, ${d.name}`);
     }
 
-    function checkForSessionController(target, prop, value, receiver) {
-        log("Checking property set:", prop, value);
+    function chk(t, p, v, r) {
+        log("Prop set:", p, v);
 
-        if (
-            value &&
-            typeof value === "object" &&
-            resolveName(value, NAME_MAP.sendMessage).fn &&
-            resolveName(value, NAME_MAP.onLinkInfo).fn &&
-            resolveName(value, NAME_MAP.onLinkDestination).fn &&
-            !_sessionController
-        ) {
-            _sessionController = value;
-            log("Intercepted session controller:", _sessionController);
-            setupSessionControllerProxy();
+        if (v && typeof v === "object" &&
+            find(v, NAME_MAP.sendMessage).fn &&
+            find(v, NAME_MAP.onLinkInfo).fn &&
+            find(v, NAME_MAP.onLinkDestination).fn &&
+            !ctrl) {
+            ctrl = v;
+            log("Got controller:", ctrl);
+            setup();
         }
 
-        return Reflect.set(target, prop, value, receiver);
+        return Reflect.set(t, p, v, r);
     }
 
-    function createComponentProxy(component) {
-        return new Proxy(component, {
-            construct(target, args) {
-                const result = Reflect.construct(target, args);
-                log("Intercepted component:", target, args, result);
-
-                result.$$.ctx = new Proxy(result.$$.ctx, {
-                    set: checkForSessionController
-                });
-
-                return result;
+    function compProxy(c) {
+        return new Proxy(c, {
+            construct(t, a) {
+                const r = Reflect.construct(t, a);
+                log("Component:", t, a, r);
+                r.$$.ctx = new Proxy(r.$$.ctx, { set: chk });
+                return r;
             }
         });
     }
 
-    function createNodeResultProxy(result) {
-        return new Proxy(result, {
-            get(target, prop, receiver) {
-                if (prop === "component") {
-                    return createComponentProxy(target.component);
-                }
-                return Reflect.get(target, prop, receiver);
+    function nodeProxy(r) {
+        return new Proxy(r, {
+            get(t, p, rx) {
+                if (p === "component") return compProxy(t.component);
+                return Reflect.get(t, p, rx);
             }
         });
     }
 
-    function createNodeProxy(oldNode) {
-        return async (...args) => {
-            const result = await oldNode(...args);
-            log("Intercepted node result:", result);
-            return createNodeResultProxy(result);
+    function makeNode(old) {
+        return async (...a) => {
+            const r = await old(...a);
+            log("Node:", r);
+            return nodeProxy(r);
         };
     }
 
-    function createKitProxy(kit) {
-        if (typeof kit !== "object" || !kit) return [false, kit];
+    function kitProxy(k) {
+        if (typeof k !== "object" || !k) return [false, k];
 
-        const originalStart = "start" in kit && kit.start;
-        if (!originalStart) return [false, kit];
+        const start = "start" in k && k.start;
+        if (!start) return [false, k];
 
-        const kitProxy = new Proxy(kit, {
-            get(target, prop, receiver) {
-                if (prop === "start") {
-                    return function(...args) {
-                        const appModule = args[0];
-                        const options = args[2];
+        const kp = new Proxy(k, {
+            get(t, p, r) {
+                if (p === "start") {
+                    return function(...a) {
+                        const mod = a[0];
+                        const opt = a[2];
 
-                        if (typeof appModule === "object" &&
-                            typeof appModule.nodes === "object" &&
-                            typeof options === "object" &&
-                            typeof options.node_ids === "object") {
-
-                            const oldNode = appModule.nodes[options.node_ids[1]];
-                            appModule.nodes[options.node_ids[1]] = createNodeProxy(oldNode);
+                        if (typeof mod === "object" &&
+                            typeof mod.nodes === "object" &&
+                            typeof opt === "object" &&
+                            typeof opt.node_ids === "object") {
+                            const old = mod.nodes[opt.node_ids[1]];
+                            mod.nodes[opt.node_ids[1]] = makeNode(old);
                         }
 
-                        log("kit.start intercepted!", options);
-                        return originalStart.apply(this, args);
+                        log("kit.start:", opt);
+                        return start.apply(this, a);
                     };
                 }
-                return Reflect.get(target, prop, receiver);
+                return Reflect.get(t, p, r);
             }
         });
 
-        return [true, kitProxy];
+        return [true, kp];
     }
 
-    function setupSvelteKitInterception() {
-        const originalPromiseAll = unsafeWindow.Promise.all;
-        let intercepted = false;
-
-        unsafeWindow.Promise.all = async function(promises) {
-            const result = originalPromiseAll.call(this, promises);
-
-            if (!intercepted) {
-                intercepted = true;
-
-                return await new Promise((resolve) => {
-                    result.then(([kit, app, ...args]) => {
-                        log("SvelteKit modules loaded");
-
-                        const [success, wrappedKit] = createKitProxy(kit);
-                        if (success) {
-                            unsafeWindow.Promise.all = originalPromiseAll;
-                            log("Wrapped kit ready:", wrappedKit, app);
+    function intercept() {
+        const orig = unsafeWindow.Promise.all;
+        let done = false;
+        unsafeWindow.Promise.all = async function(p) {
+            const res = orig.call(this, p);
+            if (!done) {
+                done = true;
+                return await new Promise((ok) => {
+                    res.then(([k, a, ...rest]) => {
+                        log("SvelteKit loaded");
+                        const [ok2, wp] = kitProxy(k);
+                        if (ok2) {
+                            unsafeWindow.Promise.all = orig;
+                            log("Kit ready:", wp, a);
                         }
-
-                        resolve([wrappedKit, app, ...args]);
+                        ok([wp, a, ...rest]);
                     });
                 });
             }
-
-            return await result;
+            return await res;
         };
     }
 
-    setupSvelteKitInterception();
+    intercept();
 
-    // Remove injected ads
-    const observer = new MutationObserver((mutations) => {
-        for (const m of mutations) {
-            for (const node of m.addedNodes) {
-                if (node.nodeType === 1) {
-                    if (node.classList?.contains("adsbygoogle")) {
-                        node.remove();
-                        log("Removed injected ad:", node);
+    const obs = new MutationObserver((muts) => {
+        for (const m of muts) {
+            for (const n of m.addedNodes) {
+                if (n.nodeType === 1) {
+                    if (n.classList?.contains("adsbygoogle")) {
+                        n.remove();
+                        log("Ad removed:", n);
                     }
-                    node.querySelectorAll?.(".adsbygoogle").forEach((el) => {
+                    n.querySelectorAll?.(".adsbygoogle").forEach((el) => {
                         el.remove();
-                        log("Removed nested ad:", el);
+                        log("Nested ad removed:", el);
                     });
                 }
             }
         }
     });
 
-    observer.observe(unsafeWindow.document.documentElement, { childList: true, subtree: true });
+    obs.observe(unsafeWindow.document.documentElement, { childList: true, subtree: true });
 })();
