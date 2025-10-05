@@ -1,232 +1,379 @@
-
 (function() {
     "use strict";
 
-    const DEBUG = false; // debug logging
-    const VERSION = "2.0.0"; // Version tracking
+    const DEBUG = false;
+    const VERSION = "2.1.0";
+    const WAIT_TIME = 30; // Thời gian chờ tối thiểu (giây)
 
-    // Preserve original console methods in case the site overrides them
-    const oldLog = window.console.log;
-    const oldWarn = window.console.warn;
-    const oldError = window.console.error;
+    // Cache console methods
+    const console = window.console;
+    const oldLog = console.log;
+    const oldWarn = console.warn;
+    const oldError = console.error;
 
-    // Wrapper functions prepend a tag and only log when DEBUG is true
-    function log(...args) { if (DEBUG) oldLog("[WorkInk Bypass]", ...args); }
-    function warn(...args) { if (DEBUG) oldWarn("[WorkInk Bypass]", ...args); }
-    function error(...args) { if (DEBUG) oldError("[WorkInk Bypass]", ...args); }
+    function log(...args) { if (DEBUG) oldLog("[WorkInk]", ...args); }
+    function warn(...args) { if (DEBUG) oldWarn("[WorkInk]", ...args); }
+    function error(...args) { if (DEBUG) oldError("[WorkInk]", ...args); }
 
-    // Override console.clear in DEBUG mode to prevent the site from erasing debug logs
-    if (DEBUG) window.console.clear = function() {};
+    if (DEBUG) console.clear = () => {};
 
-    log(`🚀 Work.ink Bypass v${VERSION} initialized`);
+    log(`🚀 Work.ink Bypass v${VERSION}`);
 
-    // Create UI container with shadow DOM for isolation
+    // ===== Enhanced UI with Progress Circle =====
     const container = document.createElement("div");
-    container.style.position = "fixed";
-    container.style.bottom = "10px";
-    container.style.left = "10px";
-    container.style.zIndex = 999999;
-
-    // Attach closed shadow root for maximum isolation
-    const shadow = container.attachShadow({ mode: "closed" });
-
-    // Create hint element with improved styling
-    const hint = document.createElement("div");
-    hint.textContent = "🔒 Please solve the captcha to continue";
-
-    Object.assign(hint.style, {
-        background: "linear-gradient(135deg, rgba(0,0,0,0.9) 0%, rgba(30,30,30,0.9) 100%)",
-        color: "#fff",
-        padding: "10px 16px",
-        borderRadius: "8px",
-        fontSize: "14px",
-        fontFamily: "system-ui, -apple-system, sans-serif",
-        pointerEvents: "none",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
-        border: "1px solid rgba(255,255,255,0.1)",
-        backdropFilter: "blur(10px)",
-        transition: "all 0.3s ease"
+    Object.assign(container.style, {
+        position: "fixed",
+        bottom: "20px",
+        right: "20px",
+        zIndex: "999999",
+        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
     });
 
-    shadow.appendChild(hint);
+    const shadow = container.attachShadow({ mode: "closed" });
+
+    shadow.innerHTML = `
+        <style>
+            .bypass-card {
+                background: linear-gradient(145deg, rgba(17, 24, 39, 0.98), rgba(31, 41, 55, 0.98));
+                backdrop-filter: blur(20px);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 16px;
+                padding: 20px;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+                min-width: 320px;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            
+            .bypass-card:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 15px 50px rgba(0, 0, 0, 0.6);
+            }
+
+            .header {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin-bottom: 16px;
+                padding-bottom: 16px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .logo {
+                width: 36px;
+                height: 36px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 20px;
+                flex-shrink: 0;
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            }
+
+            .title {
+                font-size: 16px;
+                font-weight: 600;
+                color: #fff;
+                letter-spacing: -0.02em;
+            }
+
+            .status-container {
+                display: flex;
+                align-items: center;
+                gap: 16px;
+            }
+
+            .progress-circle {
+                position: relative;
+                width: 80px;
+                height: 80px;
+                flex-shrink: 0;
+            }
+
+            .progress-ring {
+                transform: rotate(-90deg);
+            }
+
+            .progress-ring-bg {
+                fill: none;
+                stroke: rgba(255, 255, 255, 0.1);
+                stroke-width: 6;
+            }
+
+            .progress-ring-fill {
+                fill: none;
+                stroke: #667eea;
+                stroke-width: 6;
+                stroke-linecap: round;
+                transition: stroke-dashoffset 0.3s ease, stroke 0.3s ease;
+            }
+
+            .countdown-text {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                font-size: 24px;
+                font-weight: 700;
+                color: #fff;
+                text-align: center;
+                line-height: 1;
+            }
+
+            .countdown-label {
+                font-size: 10px;
+                font-weight: 500;
+                color: rgba(255, 255, 255, 0.6);
+                margin-top: 4px;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+            }
+
+            .status-content {
+                flex: 1;
+            }
+
+            .status-text {
+                color: #fff;
+                font-size: 15px;
+                font-weight: 500;
+                margin-bottom: 8px;
+                line-height: 1.4;
+            }
+
+            .status-detail {
+                color: rgba(255, 255, 255, 0.6);
+                font-size: 13px;
+                line-height: 1.4;
+            }
+
+            .icon {
+                display: inline-block;
+                margin-right: 6px;
+            }
+
+            .pulse {
+                animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            }
+
+            @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.5; }
+            }
+
+            .spinner {
+                display: inline-block;
+                width: 14px;
+                height: 14px;
+                border: 2px solid rgba(255, 255, 255, 0.3);
+                border-top-color: #fff;
+                border-radius: 50%;
+                animation: spin 0.6s linear infinite;
+                margin-right: 8px;
+                vertical-align: middle;
+            }
+
+            @keyframes spin {
+                to { transform: rotate(360deg); }
+            }
+
+            .success-checkmark {
+                display: inline-block;
+                width: 16px;
+                height: 16px;
+                border-radius: 50%;
+                background: #10b981;
+                position: relative;
+                margin-right: 8px;
+                vertical-align: middle;
+            }
+
+            .success-checkmark::after {
+                content: '';
+                position: absolute;
+                top: 3px;
+                left: 6px;
+                width: 4px;
+                height: 8px;
+                border: solid white;
+                border-width: 0 2px 2px 0;
+                transform: rotate(45deg);
+            }
+
+            /* State colors */
+            .state-waiting .progress-ring-fill { stroke: #fbbf24; }
+            .state-bypassing .progress-ring-fill { stroke: #f59e0b; }
+            .state-redirecting .progress-ring-fill { stroke: #3b82f6; }
+            .state-success .progress-ring-fill { stroke: #10b981; }
+        </style>
+
+        <div class="bypass-card state-waiting">
+            <div class="header">
+                <div class="logo">🔓</div>
+                <div class="title">Work.ink Bypass</div>
+            </div>
+            <div class="status-container">
+                <div class="progress-circle" style="display: none;">
+                    <svg class="progress-ring" width="80" height="80">
+                        <circle class="progress-ring-bg" cx="40" cy="40" r="34"/>
+                        <circle class="progress-ring-fill" cx="40" cy="40" r="34"
+                                stroke-dasharray="213.628" stroke-dashoffset="0"/>
+                    </svg>
+                    <div class="countdown-text">
+                        <div class="countdown-number">--</div>
+                        <div class="countdown-label">sec</div>
+                    </div>
+                </div>
+                <div class="status-content">
+                    <div class="status-text">
+                        <span class="icon pulse">🔒</span>
+                        <span class="status-message">Waiting for captcha</span>
+                    </div>
+                    <div class="status-detail">Please solve the captcha to continue</div>
+                </div>
+            </div>
+        </div>
+    `;
+
     document.documentElement.appendChild(container);
 
-    // Enhanced name mapping with more fallback options
+    const card = shadow.querySelector('.bypass-card');
+    const statusText = shadow.querySelector('.status-message');
+    const statusDetail = shadow.querySelector('.status-detail');
+    const progressCircle = shadow.querySelector('.progress-circle');
+    const countdownNumber = shadow.querySelector('.countdown-number');
+    const progressRingFill = shadow.querySelector('.progress-ring-fill');
+    const circleCircumference = 213.628;
+
+    function updateUI(state, message, detail = '', showCountdown = false, progress = 0) {
+        card.className = `bypass-card state-${state}`;
+        
+        const icons = {
+            waiting: '🔒',
+            bypassing: '⚡',
+            redirecting: '🚀',
+            success: ''
+        };
+
+        const iconHTML = state === 'success' 
+            ? '<span class="success-checkmark"></span>'
+            : state === 'bypassing' 
+                ? '<span class="spinner"></span>'
+                : `<span class="icon pulse">${icons[state]}</span>`;
+
+        statusText.innerHTML = `${iconHTML}<span class="status-message">${message}</span>`;
+        statusDetail.textContent = detail;
+
+        progressCircle.style.display = showCountdown ? 'block' : 'none';
+        
+        if (showCountdown) {
+            countdownNumber.textContent = Math.ceil(progress);
+            const offset = circleCircumference * (1 - (progress / WAIT_TIME));
+            progressRingFill.style.strokeDashoffset = offset;
+        }
+    }
+
+    // ===== Name Resolution (Optimized) =====
     const NAME_MAP = {
         sendMessage: ["sendMessage", "sendMsg", "writeMessage", "writeMsg", "send"],
         onLinkInfo: ["onLinkInfo", "handleLinkInfo", "linkInfo"],
         onLinkDestination: ["onLinkDestination", "handleDestination", "destination"]
     };
 
-    function resolveName(obj, candidates) {
-        for (let i = 0; i < candidates.length; i++) {
-            const name = candidates[i];
+    const resolveName = (obj, candidates) => {
+        for (const name of candidates) {
             if (typeof obj[name] === "function") {
-                log(`✓ Found method: ${name}`);
-                return { fn: obj[name], index: i, name };
+                log(`✓ ${name}`);
+                return { fn: obj[name], name };
             }
         }
-        warn(`✗ Could not find any of:`, candidates);
-        return { fn: null, index: -1, name: null };
-    }
+        warn(`✗ Missing:`, candidates);
+        return { fn: null, name: null };
+    };
 
-    // Global state
-    let _sessionController = undefined;
-    let _sendMessage = undefined;
-    let _onLinkInfo = undefined;
-    let _onLinkDestination = undefined;
-
-    // Constants
-    function getClientPacketTypes() {
-        return {
-            ANNOUNCE: "c_announce",
-            MONETIZATION: "c_monetization",
-            SOCIAL_STARTED: "c_social_started",
-            RECAPTCHA_RESPONSE: "c_recaptcha_response",
-            HCAPTCHA_RESPONSE: "c_hcaptcha_response",
-            TURNSTILE_RESPONSE: "c_turnstile_response",
-            ADBLOCKER_DETECTED: "c_adblocker_detected",
-            FOCUS_LOST: "c_focus_lost",
-            OFFERS_SKIPPED: "c_offers_skipped",
-            FOCUS: "c_focus",
-            WORKINK_PASS_AVAILABLE: "c_workink_pass_available",
-            WORKINK_PASS_USE: "c_workink_pass_use",
-            PING: "c_ping"
-        };
-    }
-
+    // ===== State =====
+    let _sessionController, _sendMessage, _onLinkInfo, _onLinkDestination;
     const startTime = Date.now();
+    let countdownInterval;
 
-    // Helper function to safely fetch with error handling
-    async function safeFetch(url, options) {
-        try {
-            await fetch(url, options);
-            log(`✓ Fetch successful: ${url}`);
-        } catch (err) {
-            warn(`✗ Fetch failed: ${url}`, err);
+    // ===== Packet Types =====
+    const PKT = {
+        MONETIZATION: "c_monetization",
+        SOCIAL_STARTED: "c_social_started",
+        TURNSTILE_RESPONSE: "c_turnstile_response",
+        ADBLOCKER_DETECTED: "c_adblocker_detected",
+        PING: "c_ping"
+    };
+
+    // ===== Monetization Handlers (Optimized) =====
+    const monetizationHandlers = {
+        22: (send) => { // readArticles2
+            send(PKT.MONETIZATION, { type: "readArticles2", payload: { event: "read" }});
+        },
+        25: (send) => { // operaGX
+            send(PKT.MONETIZATION, { type: "operaGX", payload: { event: "start" }});
+            send(PKT.MONETIZATION, { type: "operaGX", payload: { event: "installClicked" }});
+            fetch('https://work.ink/_api/v2/callback/operaGX', {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ noteligible: true })
+            }).catch(() => {});
+        },
+        34: (send) => { // norton
+            send(PKT.MONETIZATION, { type: "norton", payload: { event: "start" }});
+            send(PKT.MONETIZATION, { type: "norton", payload: { event: "installClicked" }});
+        },
+        71: (send) => { // externalArticles
+            send(PKT.MONETIZATION, { type: "externalArticles", payload: { event: "start" }});
+            send(PKT.MONETIZATION, { type: "externalArticles", payload: { event: "installClicked" }});
+        },
+        45: (send) => { // pdfeditor
+            send(PKT.MONETIZATION, { type: "pdfeditor", payload: { event: "installed" }});
+        },
+        57: (send) => { // betterdeals
+            send(PKT.MONETIZATION, { type: "betterdeals", payload: { event: "installed" }});
         }
-    }
+    };
 
+    // ===== Send Message Proxy =====
     function createSendMessageProxy() {
-        const clientPacketTypes = getClientPacketTypes();
-
         return function(...args) {
-            const packet_type = args[0];
-            const packet_data = args[1];
+            const [type, data] = args;
 
-            // Don't spam logs with ping messages
-            if (packet_type !== clientPacketTypes.PING) {
-                log("📤 Sent message:", packet_type, packet_data);
-            }
+            if (type !== PKT.PING) log("📤", type, data);
 
-            // Block adblocker detection
-            if (packet_type === clientPacketTypes.ADBLOCKER_DETECTED) {
-                warn("🛡️ Blocked adblocker detected message");
+            // Block adblock detection
+            if (type === PKT.ADBLOCKER_DETECTED) {
+                warn("🛡️ Blocked adblock detection");
                 return;
             }
 
-            // Main bypass logic when captcha is solved
-            if (_sessionController.linkInfo && packet_type === clientPacketTypes.TURNSTILE_RESPONSE) {
+            // Main bypass logic
+            if (_sessionController.linkInfo && type === PKT.TURNSTILE_RESPONSE) {
                 const ret = _sendMessage.apply(this, args);
-
-                hint.textContent = "⏳ Captcha solved, bypassing... (This can take up to a minute)";
-                hint.style.background = "linear-gradient(135deg, rgba(255,165,0,0.9) 0%, rgba(255,140,0,0.9) 100%)";
                 
-                log("🔓 Starting bypass sequence...");
+                updateUI('bypassing', 'Bypassing restrictions', 'Processing monetization layers...', false);
+                log("🔓 Bypass started");
 
-                // Send social started messages
-                for (const social of _sessionController.linkInfo.socials) {
-                    _sendMessage.call(this, clientPacketTypes.SOCIAL_STARTED, {
-                        url: social.url
-                    });
-                    log(`📱 Social bypass: ${social.url}`);
-                }
+                // Send socials
+                _sessionController.linkInfo.socials?.forEach(s => {
+                    _sendMessage.call(this, PKT.SOCIAL_STARTED, { url: s.url });
+                });
 
-                // Handle monetizations
-                for (const monetizationIdx in _sessionController.linkInfo.monetizations) {
-                    const monetization = _sessionController.linkInfo.monetizations[monetizationIdx];
-
-                    switch (monetization) {
-                        case 22: { // readArticles2
-                            log("📰 Bypassing: readArticles2");
-                            _sendMessage.call(this, clientPacketTypes.MONETIZATION, {
-                                type: "readArticles2",
-                                payload: { event: "read" }
-                            });
-                            break;
-                        }
-
-                        case 25: { // operaGX
-                            log("🎮 Bypassing: operaGX");
-                            _sendMessage.call(this, clientPacketTypes.MONETIZATION, {
-                                type: "operaGX",
-                                payload: { event: "start" }
-                            });
-                            _sendMessage.call(this, clientPacketTypes.MONETIZATION, {
-                                type: "operaGX",
-                                payload: { event: "installClicked" }
-                            });
-                            safeFetch('https://work.ink/_api/v2/callback/operaGX', {
-                                method: 'POST',
-                                mode: 'no-cors',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ 'noteligible': true })
-                            });
-                            break;
-                        }
-
-                        case 34: { // norton
-                            log("🛡️ Bypassing: norton");
-                            _sendMessage.call(this, clientPacketTypes.MONETIZATION, {
-                                type: "norton",
-                                payload: { event: "start" }
-                            });
-                            _sendMessage.call(this, clientPacketTypes.MONETIZATION, {
-                                type: "norton",
-                                payload: { event: "installClicked" }
-                            });
-                            break;
-                        }
-
-                        case 71: { // externalArticles
-                            log("📄 Bypassing: externalArticles");
-                            _sendMessage.call(this, clientPacketTypes.MONETIZATION, {
-                                type: "externalArticles",
-                                payload: { event: "start" }
-                            });
-                            _sendMessage.call(this, clientPacketTypes.MONETIZATION, {
-                                type: "externalArticles",
-                                payload: { event: "installClicked" }
-                            });
-                            break;
-                        }
-
-                        case 45: { // pdfeditor
-                            log("📝 Bypassing: pdfeditor");
-                            _sendMessage.call(this, clientPacketTypes.MONETIZATION, {
-                                type: "pdfeditor",
-                                payload: { event: "installed" }
-                            });
-                            break;
-                        }
-
-                        case 57: { // betterdeals
-                            log("💰 Bypassing: betterdeals");
-                            _sendMessage.call(this, clientPacketTypes.MONETIZATION, {
-                                type: "betterdeals",
-                                payload: { event: "installed" }
-                            });
-                            break;
-                        }
-
-                        default: {
-                            warn(`⚠️ Unknown monetization type: ${monetization} (${typeof monetization})`);
-                            break;
-                        }
+                // Send monetizations
+                _sessionController.linkInfo.monetizations?.forEach(m => {
+                    const handler = monetizationHandlers[m];
+                    if (handler) {
+                        handler((type, data) => _sendMessage.call(this, type, data));
+                        log(`✓ Bypassed: ${m}`);
+                    } else {
+                        warn(`⚠️ Unknown: ${m}`);
                     }
-                }
+                });
 
-                log("✅ Bypass sequence completed");
+                log("✅ Bypass complete");
                 return ret;
             }
 
@@ -234,21 +381,15 @@
         };
     }
 
+    // ===== Link Info Proxy =====
     function createOnLinkInfoProxy() {
         return function(...args) {
             const linkInfo = args[0];
+            log("📋 Link info");
 
-            log("📋 Link info received:", linkInfo);
-
-            // Prevent adblock detection
             Object.defineProperty(linkInfo, "isAdblockEnabled", {
-                get() { 
-                    log("🛡️ isAdblockEnabled getter called - returning false");
-                    return false;
-                },
-                set(newValue) {
-                    log(`🛡️ Attempted to set isAdblockEnabled to: ${newValue} - blocked`);
-                },
+                get: () => false,
+                set: () => {},
                 configurable: false,
                 enumerable: true
             });
@@ -257,192 +398,151 @@
         };
     }
 
-    function updateHint(waitLeft) {
-        const seconds = Math.ceil(waitLeft);
-        hint.textContent = `⏳ Destination found, redirecting in ${seconds} second${seconds !== 1 ? 's' : ''}...`;
-        hint.style.background = "linear-gradient(135deg, rgba(0,150,255,0.9) 0%, rgba(0,100,200,0.9) 100%)";
+    // ===== Countdown & Redirect =====
+    function startCountdown(url, remainingTime) {
+        updateUI('redirecting', 'Destination found!', 'Redirecting to your link...', true, remainingTime);
+        
+        const startCountdownTime = Date.now();
+        
+        countdownInterval = setInterval(() => {
+            const elapsed = (Date.now() - startCountdownTime) / 1000;
+            const remaining = Math.max(0, remainingTime - elapsed);
+            
+            if (remaining > 0) {
+                updateUI('redirecting', 'Destination found!', 'Redirecting to your link...', true, remaining);
+            } else {
+                clearInterval(countdownInterval);
+                redirect(url);
+            }
+        }, 50); // Update every 50ms for smooth animation
     }
 
     function redirect(url) {
-        hint.textContent = "🎉 Redirecting to your destination...";
-        hint.style.background = "linear-gradient(135deg, rgba(0,200,100,0.9) 0%, rgba(0,150,80,0.9) 100%)";
-        log("🚀 Redirecting to:", url);
+        updateUI('success', 'Redirecting now!', 'Taking you to your destination...', false);
+        log("🚀 Redirecting:", url);
         
         setTimeout(() => {
             window.location.href = url;
-        }, 500);
+        }, 300);
     }
 
-    function startCountdown(url, waitLeft) {
-        const startCountdownTime = Date.now();
-        updateHint(waitLeft);
-
-        const interval = setInterval(() => {
-            const elapsed = (Date.now() - startCountdownTime) / 1000;
-            const remaining = waitLeft - elapsed;
-            
-            if (remaining > 0) {
-                updateHint(remaining);
-            } else {
-                clearInterval(interval);
-                redirect(url);
-            }
-        }, 100); // Update every 100ms for smoother countdown
-    }
-
+    // ===== Destination Proxy =====
     function createOnLinkDestinationProxy() {
-        return function (...args) {
+        return function(...args) {
             const payload = args[0];
-            log("🎯 Link destination received:", payload);
+            log("🎯 Destination:", payload.url);
 
-            const waitTimeSeconds = 30;
-            const secondsPassed = (Date.now() - startTime) / 1000;
-            const remainingWait = Math.max(0, waitTimeSeconds - secondsPassed);
+            const elapsed = (Date.now() - startTime) / 1000;
+            const remaining = Math.max(0, WAIT_TIME - elapsed);
 
-            if (remainingWait <= 0) {
-                log("⚡ Minimum wait time met, redirecting immediately");
+            if (remaining <= 0) {
                 redirect(payload.url);
             } else {
-                log(`⏱️ ${Math.ceil(remainingWait)} seconds remaining before redirect`);
-                startCountdown(payload.url, remainingWait);
+                startCountdown(payload.url, remaining);
             }
 
             return _onLinkDestination.apply(this, args);
         };
     }
 
+    // ===== Setup Proxies =====
     function setupSessionControllerProxy() {
-        const sendMessage = resolveName(_sessionController, NAME_MAP.sendMessage);
-        const onLinkInfo = resolveName(_sessionController, NAME_MAP.onLinkInfo);
-        const onLinkDestination = resolveName(_sessionController, NAME_MAP.onLinkDestination);
+        const sm = resolveName(_sessionController, NAME_MAP.sendMessage);
+        const li = resolveName(_sessionController, NAME_MAP.onLinkInfo);
+        const ld = resolveName(_sessionController, NAME_MAP.onLinkDestination);
 
-        if (!sendMessage.fn || !onLinkInfo.fn || !onLinkDestination.fn) {
-            error("❌ Failed to find required session controller methods");
+        if (!sm.fn || !li.fn || !ld.fn) {
+            error("❌ Setup failed");
             return;
         }
 
-        _sendMessage = sendMessage.fn;
-        _onLinkInfo = onLinkInfo.fn;
-        _onLinkDestination = onLinkDestination.fn;
+        _sendMessage = sm.fn;
+        _onLinkInfo = li.fn;
+        _onLinkDestination = ld.fn;
 
-        const sendMessageProxy = createSendMessageProxy();
-        const onLinkInfoProxy = createOnLinkInfoProxy();
-        const onLinkDestinationProxy = createOnLinkDestinationProxy();
+        const smProxy = createSendMessageProxy();
+        const liProxy = createOnLinkInfoProxy();
+        const ldProxy = createOnLinkDestinationProxy();
 
-        // Patch the actual property names
-        Object.defineProperty(_sessionController, sendMessage.name, {
-            get() { return sendMessageProxy; },
-            set(newValue) { _sendMessage = newValue; },
+        Object.defineProperty(_sessionController, sm.name, {
+            get: () => smProxy,
+            set: (v) => { _sendMessage = v; },
             configurable: false,
             enumerable: true
         });
 
-        Object.defineProperty(_sessionController, onLinkInfo.name, {
-            get() { return onLinkInfoProxy; },
-            set(newValue) { _onLinkInfo = newValue; },
+        Object.defineProperty(_sessionController, li.name, {
+            get: () => liProxy,
+            set: (v) => { _onLinkInfo = v; },
             configurable: false,
             enumerable: true
         });
 
-        Object.defineProperty(_sessionController, onLinkDestination.name, {
-            get() { return onLinkDestinationProxy; },
-            set(newValue) { _onLinkDestination = newValue; },
+        Object.defineProperty(_sessionController, ld.name, {
+            get: () => ldProxy,
+            set: (v) => { _onLinkDestination = v; },
             configurable: false,
             enumerable: true
         });
 
-        log(`✅ SessionController proxies installed: ${sendMessage.name}, ${onLinkInfo.name}, ${onLinkDestination.name}`);
+        log(`✅ Proxies: ${sm.name}, ${li.name}, ${ld.name}`);
     }
 
-    function checkForSessionController(target, prop, value, receiver) {
-        if (DEBUG) log("🔍 Checking property set:", prop);
-
-        if (
-            value &&
-            typeof value === "object" &&
+    // ===== Session Controller Detection =====
+    const checkForSessionController = (target, prop, value, receiver) => {
+        if (value && typeof value === "object" &&
             resolveName(value, NAME_MAP.sendMessage).fn &&
             resolveName(value, NAME_MAP.onLinkInfo).fn &&
             resolveName(value, NAME_MAP.onLinkDestination).fn &&
-            !_sessionController
-        ) {
+            !_sessionController) {
+            
             _sessionController = value;
-            log("🎯 Intercepted session controller!");
+            log("🎯 Session controller found");
             setupSessionControllerProxy();
         }
-
         return Reflect.set(target, prop, value, receiver);
-    }
+    };
 
-    function createComponentProxy(component) {
-        return new Proxy(component, {
-            construct(target, args) {
-                const result = Reflect.construct(target, args);
-                log("🔧 Intercepted SvelteKit component construction");
-
-                if (result.$$ && result.$$.ctx) {
-                    result.$$.ctx = new Proxy(result.$$.ctx, {
-                        set: checkForSessionController
-                    });
-                }
-
-                return result;
+    // ===== SvelteKit Interception =====
+    const createComponentProxy = (component) => new Proxy(component, {
+        construct(target, args) {
+            const result = Reflect.construct(target, args);
+            if (result.$$ && result.$$.ctx) {
+                result.$$.ctx = new Proxy(result.$$.ctx, {
+                    set: checkForSessionController
+                });
             }
-        });
-    }
+            return result;
+        }
+    });
 
-    function createNodeResultProxy(result) {
-        return new Proxy(result, {
-            get(target, prop, receiver) {
-                if (prop === "component") {
-                    return createComponentProxy(target.component);
-                }
-                return Reflect.get(target, prop, receiver);
-            }
-        });
-    }
+    const createNodeResultProxy = (result) => new Proxy(result, {
+        get(target, prop, receiver) {
+            return prop === "component" ? createComponentProxy(target.component) : Reflect.get(target, prop, receiver);
+        }
+    });
 
-    function createNodeProxy(oldNode) {
-        return async (...args) => {
-            const result = await oldNode(...args);
-            log("📦 Intercepted SvelteKit node result");
-            return createNodeResultProxy(result);
-        };
-    }
+    const createNodeProxy = (oldNode) => async (...args) => createNodeResultProxy(await oldNode(...args));
 
-    function createKitProxy(kit) {
-        if (typeof kit !== "object" || !kit) return [false, kit];
+    const createKitProxy = (kit) => {
+        if (typeof kit !== "object" || !kit || !kit.start) return [false, kit];
 
-        const originalStart = "start" in kit && kit.start;
-        if (!originalStart) return [false, kit];
-
-        const kitProxy = new Proxy(kit, {
+        return [true, new Proxy(kit, {
             get(target, prop, receiver) {
                 if (prop === "start") {
                     return function(...args) {
-                        const appModule = args[0];
-                        const options = args[2];
-
-                        if (typeof appModule === "object" &&
-                            typeof appModule.nodes === "object" &&
-                            typeof options === "object" &&
-                            typeof options.node_ids === "object") {
-
+                        const [appModule, , options] = args;
+                        if (appModule?.nodes && options?.node_ids) {
                             const oldNode = appModule.nodes[options.node_ids[1]];
-                            if (oldNode) {
-                                appModule.nodes[options.node_ids[1]] = createNodeProxy(oldNode);
-                                log("✅ SvelteKit node proxy installed");
-                            }
+                            if (oldNode) appModule.nodes[options.node_ids[1]] = createNodeProxy(oldNode);
                         }
-
-                        return originalStart.apply(this, args);
+                        return kit.start.apply(this, args);
                     };
                 }
                 return Reflect.get(target, prop, receiver);
             }
-        });
-
-        return [true, kitProxy];
-    }
+        })];
+    };
 
     function setupSvelteKitInterception() {
         const originalPromiseAll = Promise.all;
@@ -453,72 +553,44 @@
 
             if (!intercepted) {
                 intercepted = true;
-
-                return await new Promise((resolve) => {
+                return new Promise((resolve) => {
                     result.then(([kit, app, ...args]) => {
-                        log("📚 SvelteKit modules loaded");
-
                         const [success, wrappedKit] = createKitProxy(kit);
                         if (success) {
-                            // Restore original Promise.all
                             Promise.all = originalPromiseAll;
-                            log("✅ SvelteKit interception complete");
+                            log("✅ Interception complete");
                         }
-
                         resolve([wrappedKit, app, ...args]);
-                    }).catch(err => {
-                        error("❌ Error in SvelteKit interception:", err);
-                        resolve(result);
-                    });
+                    }).catch(() => resolve(result));
                 });
             }
-
-            return await result;
+            return result;
         };
     }
 
-    // Initialize the bypass
-    log("🔌 Setting up SvelteKit interception...");
-    setupSvelteKitInterception();
+    // ===== Ad Removal (Optimized) =====
+    const AD_SELECTORS = [".adsbygoogle", "[class*='ad-']", "[id*='google_ads']", "ins.adsbygoogle"];
 
-    // Enhanced ad removal with better selectors
-    const AD_SELECTORS = [
-        ".adsbygoogle",
-        "[class*='ad-']",
-        "[id*='google_ads']",
-        "ins.adsbygoogle"
-    ];
-
-    const observer = new MutationObserver((mutations) => {
-        for (const m of mutations) {
-            for (const node of m.addedNodes) {
+    new MutationObserver((mutations) => {
+        mutations.forEach(m => {
+            m.addedNodes.forEach(node => {
                 if (node.nodeType === 1) {
-                    // Check all ad selectors
-                    for (const selector of AD_SELECTORS) {
-                        if (node.matches && node.matches(selector)) {
+                    AD_SELECTORS.forEach(selector => {
+                        if (node.matches?.(selector)) {
                             node.remove();
-                            log("🗑️ Removed ad element:", selector);
+                            log("🗑️ Ad removed");
                         }
-                        
-                        // Also check children
-                        if (node.querySelectorAll) {
-                            node.querySelectorAll(selector).forEach((el) => {
-                                el.remove();
-                                log("🗑️ Removed nested ad:", selector);
-                            });
-                        }
-                    }
+                        node.querySelectorAll?.(selector).forEach(el => {
+                            el.remove();
+                            log("🗑️ Nested ad removed");
+                        });
+                    });
                 }
-            }
-        }
-    });
+            });
+        });
+    }).observe(document.documentElement, { childList: true, subtree: true });
 
-    // Start observing the document for changes
-    observer.observe(document.documentElement, { 
-        childList: true, 
-        subtree: true 
-    });
-
-    log("👁️ Ad removal observer started");
-    log("✅ Work.ink Bypass fully initialized");
+    // ===== Initialize =====
+    setupSvelteKitInterception();
+    log("✅ Initialized");
 })();
