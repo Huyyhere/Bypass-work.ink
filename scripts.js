@@ -1,3 +1,18 @@
+// ==UserScript==
+// @name         Bypass Work.ink Huyyhere
+// @namespace    http://tampermonkey.net/
+// @version      1.0.0
+// @description  Ultimate bypass for work.ink and key.volcano.wtf
+// @author       huyyhere
+// @match        https://work.ink/*
+// @match        https://key.volcano.wtf/*
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=work.ink
+// @run-at       document-start
+// @license      MIT
+// @updateURL    https://raw.githubusercontent.com/Huyyhere/Bypass-work.ink/main/scripts.js
+// @downloadURL  https://raw.githubusercontent.com/Huyyhere/Bypass-work.ink/main/scripts.js
+// ==/UserScript==
+
 (function() {
     "use strict";
 
@@ -110,9 +125,6 @@
             if (isWorkInk && ctrl.linkInfo && (typ === p.TURNSTILE_RESPONSE || typ === p.RECAPTCHA_RESPONSE || typ === p.HCAPTCHA_RESPONSE)) {
                 const ret = send.apply(this, args);
                 upd("Bypassing...", true);
-
-                const sc = ctrl.linkInfo.socials.length;
-                const mc = ctrl.linkInfo.monetizations.length;
 
                 for (const s of ctrl.linkInfo.socials) {
                     send.call(this, p.SOCIAL_STARTED, { url: s.url });
@@ -400,15 +412,24 @@
     function waitForWorkInk() {
         if (isVolcano) {
             upd("Waiting for redirect...");
-            const interval = setInterval(() => {
-                if (window.location.hostname.includes("work.ink")) {
-                    clearInterval(interval);
-                    isVolcano = false;
-                    isWorkInk = true;
-                    upd("Solve captcha first");
-                    log("Redirected to work.ink, proceeding with bypass");
+            const observer = new MutationObserver((mutations) => {
+                const continueButton = document.querySelector('button:contains("Continue with Work.ink")') ||
+                                      document.querySelector('button:contains("Continue")');
+                if (continueButton) {
+                    log("Continue button detected, simulating click...");
+                    continueButton.click();
+                    observer.disconnect();
+                    setTimeout(() => {
+                        isVolcano = window.location.hostname.includes("key.volcano.wtf");
+                        isWorkInk = window.location.hostname.includes("work.ink");
+                        if (isWorkInk) {
+                            upd("Solve captcha first");
+                            log("Redirected to work.ink, proceeding with bypass");
+                        }
+                    }, 1000);
                 }
-            }, 1000);
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
         }
     }
 
