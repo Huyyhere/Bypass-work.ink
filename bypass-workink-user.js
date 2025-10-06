@@ -1,11 +1,12 @@
 // ==UserScript==
-// @name         Bypass Work.ink Huyyhere
+// @name         Bypass Volcano Huyyhere
 // @namespace    http://tampermonkey.net/
 // @version      1.0.0
-// @description  Ultimate bypasses work.ink
+// @description  Ultimate bypasses volcano
 // @author       huyyhere
 // @match        https://work.ink/*
-// @icon         https://www.google.com/s2/favicons?sz=64&domain=work.ink
+// @match        https://key.volcano.wtf/*
+// @icon         https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRuq9ktuJfrCQGVovXo1ZBYu8n-ktMCJSxFIg&s
 // @run-at       document-start
 // @license      MIT
 // @updateURL    https://raw.githubusercontent.com/Huyyhere/Bypass-work.ink/refs/heads/main/scripts.js
