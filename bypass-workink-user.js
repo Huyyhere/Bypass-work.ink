@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Bypass Volcano Huyyhere
+// @name         Bypass Volcano & Work.ink
 // @namespace    http://tampermonkey.net/
 // @version      2.0.0
 // @description  Ultimate bypasses volcano
