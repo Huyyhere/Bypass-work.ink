@@ -17,7 +17,7 @@
                 background: linear-gradient(145deg, #667eea 0%, #764ba2 100%);
                 border-radius: 16px;
                 padding: 28px;
-                width: 400px;
+                width: 420px;
                 box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
                 color: #fff;
                 backdrop-filter: blur(10px);
@@ -100,11 +100,20 @@
                 0%, 100% { transform: scale(1); }
                 50% { transform: scale(1.05); }
             }
+            .auto-check {
+                background: rgba(255, 255, 255, 0.1);
+                padding: 12px;
+                border-radius: 8px;
+                margin-top: 12px;
+                font-size: 13px;
+                text-align: center;
+                opacity: 0.9;
+            }
         </style>
         <div class="wrap">
-            <div class="header">Work.ink Bypass</div>
+            <div class="header">Work.ink Auto Bypass</div>
             <div class="status">
-                <div class="message" id="msg">Waiting for captcha...</div>
+                <div class="message" id="msg">Initializing...</div>
                 <div class="bar-wrap" id="barwrap">
                     <div class="bar" id="bar"></div>
                 </div>
@@ -123,6 +132,7 @@
                     <span class="value" id="offers">0</span>
                 </div>
             </div>
+            <div class="auto-check" id="autocheck">Auto-solving captcha...</div>
         </div>
     `;
 
@@ -136,6 +146,7 @@
     const status = $("status");
     const socials = $("socials");
     const offers = $("offers");
+    const autocheck = $("autocheck");
 
     const showNotification = (text, type = "info") => {
         const notification = document.createElement("div");
@@ -143,7 +154,7 @@
             position: fixed;
             top: 20px;
             right: 20px;
-            background: ${type === "success" ? "linear-gradient(135deg, #00f260, #0575e6)" : "linear-gradient(135deg, #667eea, #764ba2)"};
+            background: ${type === "success" ? "linear-gradient(135deg, #00f260, #0575e6)" : type === "error" ? "linear-gradient(135deg, #ff6b6b, #ee5a6f)" : "linear-gradient(135deg, #667eea, #764ba2)"};
             color: white;
             padding: 16px 24px;
             border-radius: 12px;
@@ -159,27 +170,18 @@
         const style = document.createElement("style");
         style.textContent = `
             @keyframes slideInRight {
-                from {
-                    opacity: 0;
-                    transform: translateX(100px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateX(0);
-                }
+                from { opacity: 0; transform: translateX(100px); }
+                to { opacity: 1; transform: translateX(0); }
             }
             @keyframes slideOutRight {
-                from {
-                    opacity: 1;
-                    transform: translateX(0);
-                }
-                to {
-                    opacity: 0;
-                    transform: translateX(100px);
-                }
+                from { opacity: 1; transform: translateX(0); }
+                to { opacity: 0; transform: translateX(100px); }
             }
         `;
-        document.head.appendChild(style);
+        if (!document.querySelector('style[data-notification]')) {
+            style.setAttribute('data-notification', 'true');
+            document.head.appendChild(style);
+        }
         
         notification.textContent = text;
         document.body.appendChild(notification);
@@ -194,19 +196,17 @@
         update: (text, showBar = false) => {
             msg.textContent = text;
             barwrap.style.display = showBar ? "block" : "none";
-            showNotification(text);
         },
         showInfo: (socialCount, offerCount) => {
             info.style.display = "block";
             status.textContent = "Bypassing";
             socials.textContent = socialCount;
             offers.textContent = offerCount;
-            showNotification(`Bypassing ${socialCount} socials & ${offerCount} offers...`);
+            autocheck.style.display = "none";
         },
         complete: () => {
             bar.style.width = "100%";
             status.textContent = "Complete";
-            showNotification("Bypass completed successfully!", "success");
         },
         countdown: (seconds) => {
             const statusDiv = $("msg").parentElement;
@@ -214,8 +214,6 @@
                 <div class="big">✓</div>
                 <div class="message">Redirecting in <span id="countdown">${Math.ceil(seconds)}</span>s</div>
             `;
-            
-            showNotification(`Redirecting in ${Math.ceil(seconds)} seconds...`, "success");
             
             const timer = setInterval(() => {
                 seconds -= 1;
@@ -234,6 +232,8 @@
         MONETIZATION: "c_monetization",
         SOCIAL_STARTED: "c_social_started",
         TURNSTILE: "c_turnstile_response",
+        RECAPTCHA: "c_recaptcha_response",
+        HCAPTCHA: "c_hcaptcha_response",
         ADBLOCK: "c_adblocker_detected",
         PING: "c_ping"
     };
@@ -248,7 +248,7 @@
                 mode: "no-cors",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ noteligible: true })
-            });
+            }).catch(() => {});
         },
         34: (send) => {
             send(PKT.MONETIZATION, { type: "norton", payload: { event: "start" } });
@@ -263,15 +263,45 @@
     };
 
     let controller, sendMessage, startTime = Date.now();
+    let captchaCheckInterval;
 
     const findMethod = (obj, names) => {
         return names.map(name => obj[name]).find(fn => typeof fn === "function");
+    };
+
+    const autoSolveCaptcha = () => {
+        const checkCaptcha = () => {
+            const turnstile = document.querySelector('iframe[src*="turnstile"]');
+            const recaptcha = document.querySelector('iframe[src*="recaptcha"]');
+            const hcaptcha = document.querySelector('iframe[src*="hcaptcha"]');
+            
+            if (turnstile || recaptcha || hcaptcha) {
+                ui.update("Captcha detected! Auto-solving...", true);
+                showNotification("Captcha found, attempting auto-solve...", "info");
+                
+                setTimeout(() => {
+                    const checkbox = document.querySelector('input[type="checkbox"]');
+                    if (checkbox && !checkbox.checked) {
+                        checkbox.click();
+                        showNotification("Captcha checkbox clicked!", "success");
+                    }
+                }, 1000);
+            }
+        };
+        
+        captchaCheckInterval = setInterval(checkCaptcha, 2000);
+        checkCaptcha();
     };
 
     const setupHooks = () => {
         const originalSend = findMethod(controller, ["sendMessage", "sendMsg", "writeMessage"]);
         const originalInfo = findMethod(controller, ["onLinkInfo"]);
         const originalDest = findMethod(controller, ["onLinkDestination"]);
+
+        if (!originalSend || !originalInfo || !originalDest) {
+            showNotification("Failed to hook methods!", "error");
+            return;
+        }
 
         sendMessage = originalSend;
 
@@ -281,14 +311,16 @@
                 
                 if (type === PKT.ADBLOCK) return;
 
-                if (controller.linkInfo && type === PKT.TURNSTILE) {
+                if (controller.linkInfo && (type === PKT.TURNSTILE || type === PKT.RECAPTCHA || type === PKT.HCAPTCHA)) {
                     const result = originalSend.apply(this, args);
                     
+                    clearInterval(captchaCheckInterval);
                     showNotification("Captcha solved! Starting bypass...", "success");
                     ui.update("Processing bypass...", true);
 
                     const { socials, monetizations } = controller.linkInfo;
                     ui.showInfo(socials.length, monetizations.length);
+                    showNotification(`Found ${socials.length} socials & ${monetizations.length} offers`, "info");
 
                     socials.forEach(social => {
                         sendMessage.call(this, PKT.SOCIAL_STARTED, { url: social.url });
@@ -300,7 +332,11 @@
                         }
                     });
 
-                    setTimeout(ui.complete, 1000);
+                    setTimeout(() => {
+                        ui.complete();
+                        showNotification("Bypass completed successfully!", "success");
+                    }, 1500);
+                    
                     return result;
                 }
 
@@ -326,6 +362,8 @@
                 ui.redirectUrl = args[0].url;
                 const waitTime = 30 - (Date.now() - startTime) / 1000;
                 
+                showNotification(`Redirecting to destination...`, "success");
+                
                 if (waitTime > 0) {
                     ui.countdown(waitTime);
                 } else {
@@ -336,6 +374,10 @@
             },
             configurable: false
         });
+
+        showNotification("Hooks installed successfully!", "success");
+        ui.update("Waiting for captcha...");
+        autoSolveCaptcha();
     };
 
     const interceptSvelteKit = () => {
@@ -399,6 +441,7 @@
     };
 
     interceptSvelteKit();
+    showNotification("Work.ink Auto Bypass loaded!", "success");
 
     new MutationObserver(mutations => {
         mutations.forEach(mutation => {
