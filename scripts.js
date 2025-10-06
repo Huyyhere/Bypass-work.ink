@@ -21,6 +21,17 @@
                 box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
                 color: #fff;
                 backdrop-filter: blur(10px);
+                animation: slideIn 0.5s ease-out;
+            }
+            @keyframes slideIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(-30px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
             }
             .header {
                 font-size: 24px;
@@ -126,20 +137,76 @@
     const socials = $("socials");
     const offers = $("offers");
 
+    const showNotification = (text, type = "info") => {
+        const notification = document.createElement("div");
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${type === "success" ? "linear-gradient(135deg, #00f260, #0575e6)" : "linear-gradient(135deg, #667eea, #764ba2)"};
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            z-index: 1000000;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            max-width: 350px;
+            animation: slideInRight 0.3s ease-out;
+        `;
+        
+        const style = document.createElement("style");
+        style.textContent = `
+            @keyframes slideInRight {
+                from {
+                    opacity: 0;
+                    transform: translateX(100px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateX(0);
+                }
+            }
+            @keyframes slideOutRight {
+                from {
+                    opacity: 1;
+                    transform: translateX(0);
+                }
+                to {
+                    opacity: 0;
+                    transform: translateX(100px);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        notification.textContent = text;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.style.animation = "slideOutRight 0.3s ease-out";
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    };
+
     const ui = {
         update: (text, showBar = false) => {
             msg.textContent = text;
             barwrap.style.display = showBar ? "block" : "none";
+            showNotification(text);
         },
         showInfo: (socialCount, offerCount) => {
             info.style.display = "block";
             status.textContent = "Bypassing";
             socials.textContent = socialCount;
             offers.textContent = offerCount;
+            showNotification(`Bypassing ${socialCount} socials & ${offerCount} offers...`);
         },
         complete: () => {
             bar.style.width = "100%";
             status.textContent = "Complete";
+            showNotification("Bypass completed successfully!", "success");
         },
         countdown: (seconds) => {
             const statusDiv = $("msg").parentElement;
@@ -147,6 +214,8 @@
                 <div class="big">✓</div>
                 <div class="message">Redirecting in <span id="countdown">${Math.ceil(seconds)}</span>s</div>
             `;
+            
+            showNotification(`Redirecting in ${Math.ceil(seconds)} seconds...`, "success");
             
             const timer = setInterval(() => {
                 seconds -= 1;
@@ -214,6 +283,8 @@
 
                 if (controller.linkInfo && type === PKT.TURNSTILE) {
                     const result = originalSend.apply(this, args);
+                    
+                    showNotification("Captcha solved! Starting bypass...", "success");
                     ui.update("Processing bypass...", true);
 
                     const { socials, monetizations } = controller.linkInfo;
@@ -298,6 +369,7 @@
                                                             if (value && typeof value === "object" && 
                                                                 findMethod(value, ["sendMessage"]) && !controller) {
                                                                 controller = value;
+                                                                showNotification("Script initialized successfully!", "success");
                                                                 setupHooks();
                                                             }
                                                             return Reflect.set(ctxTarget, prop, value);
