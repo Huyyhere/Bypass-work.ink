@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @version      1.0.0
 // @description  Ultimate bypasses work.ink
-// @author       huyyhere (Copyright source IHaxU)
+// @author       huyyhere
 // @match        https://work.ink/*
 // @icon         https://bom.edu.vn/public/upload/2024/12/capybara-meme-chibi-6.webp
 // @run-at       document-start
