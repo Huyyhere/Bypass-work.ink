@@ -1,10 +1,18 @@
 // ==UserScript==
-// @name         Bypass Work.ink
+// @name         Bypass Lootlabs
 // @namespace    http://tampermonkey.net/
 // @version      1.0.0
-// @description  Ultimate bypasses work.ink
+// @description  Bypass Link Lootlabs
 // @author       huyyhere
-// @match        https://work.ink/*
+// @match        *://loot-link.com/s?*
+// @match        *://loot-links.com/s?*
+// @match        *://lootlink.org/s?*
+// @match        *://lootlinks.co/s?*
+// @match        *://lootdest.info/s?*
+// @match        *://lootdest.org/s?*
+// @match        *://lootdest.com/s?*
+// @match        *://links-loot.com/s?*
+// @match        *://linksloot.net/s?*
 // @icon         https://bom.edu.vn/public/upload/2024/12/capybara-meme-chibi-6.webp
 // @run-at       document-start
 // @license      MIT
