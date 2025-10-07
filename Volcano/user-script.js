@@ -9,7 +9,7 @@
 // @icon         https://bom.edu.vn/public/upload/2024/12/capybara-meme-chibi-6.webp
 // @run-at       document-start
 // @license      MIT
-// @updateURL    https://raw.githubusercontent.com/Huyyhere/Bypass-work.ink/refs/heads/main/scripts.js
-// @downloadURL  https://raw.githubusercontent.com/Huyyhere/Bypass-work.ink/refs/heads/main/scripts.js
-// @require      https://raw.githubusercontent.com/Huyyhere/Bypass-work.ink/refs/heads/main/scripts.js
+// @updateURL    https://raw.githubusercontent.com/Huyyhere/Bypass-link/refs/heads/main/Volcano/script.js
+// @downloadURL  https://raw.githubusercontent.com/Huyyhere/Bypass-link/refs/heads/main/Volcano/script.js
+// @require      https://raw.githubusercontent.com/Huyyhere/Bypass-link/refs/heads/main/Volcano/script.js
 // ==/UserScript==
