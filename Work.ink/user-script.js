@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bypass Work.ink
 // @namespace    http://tampermonkey.net/
-// @version      1.5.0
+// @version      2.2.0
 // @description  Auto bypass Work.ink [8/10/2025-VN]
 // @author       huyyhere
 // @icon         https://cdn-media.sforum.vn/storage/app/media/anhthem/meme-tinh-yeu-61.jpg
