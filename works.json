@@ -1,5 +1,5 @@
 {
   "volcano_executor": true,
-  "work.ink": false,
+  "work.ink": true,
   "lootlabs": true
 }
