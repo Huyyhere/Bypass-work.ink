@@ -9,7 +9,7 @@
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=work.ink
 // @run-at       document-start
 // @license      MIT
-// @updateURL    https://raw.githubusercontent.com/Huyyhere/Bypass-work.ink/refs/heads/main/scripts.js
-// @downloadURL  https://raw.githubusercontent.com/Huyyhere/Bypass-work.ink/refs/heads/main/scripts.js
-// @require      https://raw.githubusercontent.com/Huyyhere/Bypass-work.ink/refs/heads/main/scripts.js
+// @updateURL    https://raw.githubusercontent.com/Huyyhere/Bypass-link/refs/heads/main/Work.ink/script.js
+// @downloadURL  https://raw.githubusercontent.com/Huyyhere/Bypass-link/refs/heads/main/Work.ink/script.js
+// @require      https://raw.githubusercontent.com/Huyyhere/Bypass-link/refs/heads/main/Work.ink/script.js
 // ==/UserScript==
