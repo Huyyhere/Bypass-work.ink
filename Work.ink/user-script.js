@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Bypass Work.ink
-// @namespace    https://raw.githubusercontent.com/Huyyhere/Bypass-link/refs/heads/main/Work.ink/user-script.js
+// @namespace    https://github.com/Huyyhere/Bypass-link
 // @version      2.0.1
 // @description  Auto bypass Work.ink.
 // @author       huyyhere
