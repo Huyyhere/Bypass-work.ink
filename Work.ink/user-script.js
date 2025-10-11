@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bypass Work.ink
 // @namespace    https://github.com/Huyyhere/Bypass-link
-// @version      2.0.1
+// @version      2.0.2
 // @description  Auto bypass Work.ink.
 // @author       huyyhere
 // @icon         https://cdn-media.sforum.vn/storage/app/media/anhthem/meme-tinh-yeu-61.jpg
