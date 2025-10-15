@@ -2,7 +2,7 @@
 // @name         Work.ink Bypass
 // @namespace    http://tampermonkey.net/
 // @version      2.0.0
-// @description  Auto bypass Work.ink with enhanced Halloween-themed UI, slider, and Discord button
+// @description  Auto bypass Work.ink
 // @author       Huyyhere
 // @match        *://*.work.ink/*
 // @match        *://*.workink.co/*
